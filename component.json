@@ -1,0 +1,15 @@
+{
+	"name": "collage", 
+	"version": "0.1.0",
+	"main": "./dist/collage.js",
+	"dependencies": {
+		"big-surface": "~0.1.0",
+		"giant-quadtree": "~0.1.0"
+	},
+	"ignore": [
+		"./src/**",
+		"node_modules",
+		"grunt.js",
+		"package.json"
+	]
+}

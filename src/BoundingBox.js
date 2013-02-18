@@ -1,0 +1,19 @@
+var BoundingBox = module.exports = function(element, left, top){
+	this.element = element;
+	this.top = top || 0;
+	this.left = left || 0;
+	this.width = this.element.width;
+	this.height = this.element.height;
+	this.bottom = this.top + this.height;
+	this.right = this.left + this.width;
+}
+
+BoundingBox.prototype.show = function(container){
+	this.visible = true;
+	this.element.show(this.left, this.top, container);
+};
+
+BoundingBox.prototype.hide = function(container){
+	this.visible = false;
+	this.element.hide(container);
+};

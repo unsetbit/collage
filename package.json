@@ -1,0 +1,33 @@
+{
+  "name": "collage",
+  "version": "0.1.0",
+  "description": "Framework for interactive collages",
+  "main": "index.js",
+  "dependencies": {},
+  "devDependencies": {
+    "grunt": "~0.3.17",
+    "grunt-hug": "~0.4.1"
+  },
+  "scripts": {
+    "test": "echo 0"
+  },
+  "engines": {
+    "node": "~0.8.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ozanturgut/collage.git"
+  },
+  "keywords": [],
+  "author": {
+    "name": "Ozan Turgut",
+    "email": "ozanturgut@gmail.com",
+    "url": "http://oztu.org"
+  },
+  "licenses": [
+    {
+      "type": "Apache License 2.0",
+      "url": "https://github.com/ozanturgut/collage/blob/master/LICENSE-APACHE2"
+    }
+  ]
+}

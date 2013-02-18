@@ -5,7 +5,7 @@ module.exports = function(grunt) {
       client: {
         src: './src/collage.js',
         dest: 'dist/collage-expanded.js',
-        exportedVariable: 'createCollage',
+        exportedVariable: 'Collage',
         exports: './src/collage.js',
         path: ['./components']
       },

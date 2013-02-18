@@ -1,6 +1,6 @@
 {
   "name": "collage",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Framework for interactive collages",
   "main": "index.js",
   "dependencies": {},

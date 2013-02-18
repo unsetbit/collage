@@ -1,74 +1,104 @@
-var createQuadtree = require('giant-quadtree/dist/quadtree-module.js'),
-	createBigSurface = require('big-surface/dist/surface-module.js'),
-	BigSurface = createBigSurface.constructor;
+var createQuadtree = require('giant-quadtree/dist/quadtree-module.js').create,
+	Surface = require('big-surface/dist/surface-module.js');
 
 var BoundingBox = require('./boundingBox.js');
 
-module.exports = function(container){
-	var bigCollage = new BigCollage(container);
-	return apiFactory(bigCollage);
+var Collage = module.exports = function(container){
+	Surface.call(this, container);
+	container.className += " collage";
+	this.quadtree = createQuadtree(15000);
+	this.collections = [];
+}
+Collage.prototype = Object.create(Surface.prototype);
+
+Collage.create = function(container){
+	var collage = new Collage(container);
+	return getApi(collage);
 };
 
-var apiFactory = module.exports.apiFactory = function(bigCollage){
-	var api = createBigSurface.apiFactory(bigCollage);
+Collage.getApi = function(collage){
+	var api = createSurface.apiFactory(collage);
 
-	api.hasLocationNearViewport = bigCollage.hasLocationNearViewport.bind(bigCollage);
-	api.setElementPicker = bigCollage.setElementPicker.bind(bigCollage);
+	api.hasLocationNearViewport = collage.hasLocationNearViewport.bind(collage);
+
 	return api;
 };
 
-var BigCollage = module.exports.constructor = function(container){
-	BigSurface.call(this, container);
-	container.className += " big-collage";
-	this.quadtree = createQuadtree(15000);
-}
-BigCollage.prototype = Object.create(BigSurface.prototype);
+Collage.collection = require('./collection/index.js');
 
 // How many random spot will be checked to place elements per frame
-BigCollage.prototype.scanTryLimit = 200;
+Collage.prototype.scanTryLimit = 200;
 
 // Max number of frames an element has to find a place before another is picked
 // this prevents large gaps due to large elements
-BigCollage.prototype.missLimit = 4;
+Collage.prototype.missLimit = 4;
 
 // Minimum pixel spacing between elements
-BigCollage.prototype.elementMargin = 25;
+Collage.prototype.elementMargin = 25;
 
 // How much beyond the window to scan for places to put objects when filling
-BigCollage.prototype.overScan = 0;
+Collage.prototype.overScan = 0;
 
-BigCollage.prototype.hidingArea =  document.createDocumentFragment();
-BigCollage.prototype.minElementSize = 50;
+Collage.prototype.hidingArea =  document.createDocumentFragment();
+Collage.prototype.minElementSize = 50;
 
-BigCollage.prototype.elementPicker = function(){};
-
-BigCollage.prototype.step = function(){
-	BigSurface.prototype.step.call(this);
+Collage.prototype.step = function(){
+	Surface.prototype.step.call(this);
 
 	this.fill();
 };
 
-BigCollage.prototype.start = function(){
-	BigSurface.prototype.start.call(this);
+Collage.prototype.start = function(){
+	Surface.prototype.start.call(this);
 	
 	this.updateCanvasDimensions();
 	this.pickNextElement();
 	this.fillCenter();
 };
 
-BigCollage.prototype.setElementPicker = function(func){
-	this.elementPicker = func;
+Collage.prototype.addCollection = function(collection){
+	// don't allow dupes
+	if(~this.collections.indexOf(collection)) return false;
+	
+	// Binary search to find insertion index based on priority
+  	var low = 0, 
+  		high = this.collections.length,
+  		mid;
+	while (low < high) {
+		mid = (low + high) >>> 1;
+		this.collections[mid].priority > collection.priority ? 
+			low = mid + 1 : 
+			high = mid;
+	}
+
+	this.collections.splice(low, 0, collection);
+	return true;
 };
 
-BigCollage.prototype.pickNextElement = function(){
-	var element = this.elementPicker();
-	this.missCount = 0;
+Collage.prototype.removeCollection = function(collection){
+	var index = this.collections.indexOf(collection);
+	if(!~index) return false;
+	
+	this.collections.splice(index, 1);	
+	return true; 
+};
+
+Collage.prototype.pickNextElement = function(){
+	var index = 0,
+		length = this.collections.length,
+		element;
+	
+	for(; index < length; index++){
+		element = this.collections[index].element();
+		if(element) break;
+	}
 
 	this.nextElement = element;
+	this.missCount = 0;
 	this.updateScanDimensions();
 };
 
-BigCollage.prototype.insertNextElement = function(left, top, show){
+Collage.prototype.insertNextElement = function(left, top, show){
 	var boundingBox = new BoundingBox(this.nextElement, left, top);
 	this.nextElement.locations.push(boundingBox);
 	
@@ -83,7 +113,7 @@ BigCollage.prototype.insertNextElement = function(left, top, show){
 	this.pickNextElement();
 };
 
-BigCollage.prototype.hasLocationNearViewport = function(element){
+Collage.prototype.hasLocationNearViewport = function(element){
 	var index = 0,
 		length = element.locations.length;
 
@@ -96,7 +126,7 @@ BigCollage.prototype.hasLocationNearViewport = function(element){
 	return false;
 };
 
-BigCollage.prototype.isNearViewport = function(boundingBox){
+Collage.prototype.isNearViewport = function(boundingBox){
 	var areaLeft = this.canvasLeft - this.canvasWidth,
 		areaRight = this.canvasRight + this.canvasWidth,
 		areaTop = this.canvasTop - this.canvasHeight,
@@ -108,7 +138,7 @@ BigCollage.prototype.isNearViewport = function(boundingBox){
 				(boundingBox.bottom < areaBottom && areaTop < boundingBox.bottom)));
 }
 
-BigCollage.prototype.hideOutOfViewElements = function(visibleElements){
+Collage.prototype.hideOutOfViewElements = function(visibleElements){
 	var step = this.minElementSize,
 		scanLeft = this.canvasLeft - this.horizontalSpeedLimit - 1,
 		scanRight = this.canvasRight + this.horizontalSpeedLimit + step,
@@ -183,7 +213,7 @@ BigCollage.prototype.hideOutOfViewElements = function(visibleElements){
 	}
 };
 
-BigCollage.prototype.showInViewElements = function(){
+Collage.prototype.showInViewElements = function(){
 	var step = this.minElementSize,
 		scanLeft = this.canvasLeft + this.horizontalSpeedLimit,
 		scanRightInner = this.canvasRight - this.horizontalSpeedLimit,
@@ -259,13 +289,13 @@ BigCollage.prototype.showInViewElements = function(){
 	return boundingBoxes;
 };
 
-BigCollage.prototype.updateElementVisibility = function(){
+Collage.prototype.updateElementVisibility = function(){
 	var visibleElements = this.showInViewElements();
 	this.hideOutOfViewElements(visibleElements);
 };
 
 
-BigCollage.prototype.updateScanDimensions = function(){
+Collage.prototype.updateScanDimensions = function(){
 	this.checkWidth = this.nextElement.width + this.elementMargin * 2;
 	this.scanLeft = this.canvasLeft - this.checkWidth;
 	this.scanWidth = this.canvasWidth + this.checkWidth * 2;
@@ -279,7 +309,7 @@ BigCollage.prototype.updateScanDimensions = function(){
 	this.scanBottom = this.scanTop + this.scanHeight;
 };
 
-BigCollage.prototype.updateCanvasDimensions = function(){
+Collage.prototype.updateCanvasDimensions = function(){
 	this.shiftY = Math.abs(this.offsetY - (this.lastOffsetY || this.offsetY));
 	this.shiftX = Math.abs(this.offsetX - (this.lastOffsetX || this.offsetX));
 	this.canvasLeft = -1 * this.offsetX - this.overScan,
@@ -290,7 +320,7 @@ BigCollage.prototype.updateCanvasDimensions = function(){
 	this.canvasBottom = this.canvasTop + this.canvasHeight;
 };
 
-BigCollage.prototype.fillCenter = function(){
+Collage.prototype.fillCenter = function(){
 	this.updateCanvasDimensions();
 	this.updateScanDimensions();
 
@@ -322,7 +352,7 @@ BigCollage.prototype.fillCenter = function(){
 	this.updateElementVisibility();
 };
 
-BigCollage.prototype.fill = function(){
+Collage.prototype.fill = function(){
 	this.updateCanvasDimensions();
 	this.updateScanDimensions();
 	

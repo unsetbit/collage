@@ -1,10 +1,12 @@
 {
 	"name": "collage", 
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"main": "./dist/collage.js",
 	"dependencies": {
 		"big-surface": "~0.1.0",
-		"giant-quadtree": "~0.1.0"
+		"giant-quadtree": "~0.1.0",
+		"mustache": "~0.7.2",
+		"eventEmitter": "~4.0.5"
 	},
 	"ignore": [
 		"./src/**",

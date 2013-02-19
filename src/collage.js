@@ -13,14 +13,16 @@ Collage.prototype = Object.create(Surface.prototype);
 
 Collage.create = function(container){
 	var collage = new Collage(container);
-	return getApi(collage);
+	return Collage.getApi(collage);
 };
 
 Collage.getApi = function(collage){
-	var api = createSurface.apiFactory(collage);
+	var api = Surface.getApi(collage);
 
-	api.hasLocationNearViewport = collage.hasLocationNearViewport.bind(collage);
-
+	api.touchesCanvas = collage.touchesCanvas.bind(collage);
+	api.addCollection = collage.addCollection.bind(collage);
+	api.removeCollection = collage.removeCollection.bind(collage);
+	
 	return api;
 };
 
@@ -50,7 +52,6 @@ Collage.prototype.step = function(){
 
 Collage.prototype.start = function(){
 	Surface.prototype.start.call(this);
-	
 	this.updateCanvasDimensions();
 	this.pickNextElement();
 	this.fillCenter();
@@ -83,22 +84,39 @@ Collage.prototype.removeCollection = function(collection){
 	return true; 
 };
 
+// Max attempts to find an element out of view before using one
+// that is in view
+Collage.prototype.pickNextElementFailSafe = 50;
+
 Collage.prototype.pickNextElement = function(){
-	var index = 0,
-		length = this.collections.length,
+	var failSafe = this.pickNextElementFailSafe,
+		collectionCount = this.collections.length,
 		element;
 	
-	for(; index < length; index++){
-		element = this.collections[index].element();
-		if(element) break;
+	while(!element && failSafe--){
+		element = this.collections[(Math.random() * collectionCount)|0].getNonvisibileElement();
+	}
+
+	if(!element){
+		failSafe = this.pickNextElementFailSafe;
+		while(!element && failSafe--){
+			element = this.collections[(Math.random() * collectionCount)|0].getElement();	
+			if(this.isVisible(element)) element = void 0;
+		}
 	}
 
 	this.nextElement = element;
 	this.missCount = 0;
+
+	
 	this.updateScanDimensions();
 };
 
 Collage.prototype.insertNextElement = function(left, top, show){
+	if(this.isVisible(this.nextElement)){
+		return this.pickNextElement();	
+	} 
+
 	var boundingBox = new BoundingBox(this.nextElement, left, top);
 	this.nextElement.locations.push(boundingBox);
 	
@@ -113,12 +131,22 @@ Collage.prototype.insertNextElement = function(left, top, show){
 	this.pickNextElement();
 };
 
-Collage.prototype.hasLocationNearViewport = function(element){
+Collage.prototype.isVisible = function(element){
 	var index = 0,
-		length = element.locations.length;
+		length = element.locations.length,
+		boundingBox,
+		areaLeft = this.canvasLeft,
+		areaRight = this.canvasRight,
+		areaTop = this.canvasTop,
+		areaBottom = this.canvasBottom;
 
 	for(; index < length; index++){
-		if(this.isNearViewport(element.locations[index])){
+		boundingBox = element.locations[index];
+		
+		if((((areaLeft < boundingBox.left && boundingBox.left < areaRight) ||
+				(boundingBox.right < areaRight && areaLeft < boundingBox.right)) &&
+			((areaTop < boundingBox.top && boundingBox.top < areaBottom) || 
+				(boundingBox.bottom < areaBottom && areaTop < boundingBox.bottom)))){
 			return true;
 		}
 	}
@@ -126,11 +154,11 @@ Collage.prototype.hasLocationNearViewport = function(element){
 	return false;
 };
 
-Collage.prototype.isNearViewport = function(boundingBox){
-	var areaLeft = this.canvasLeft - this.canvasWidth,
-		areaRight = this.canvasRight + this.canvasWidth,
-		areaTop = this.canvasTop - this.canvasHeight,
-		areaBottom = this.canvasBottom + this.canvasHeight;
+Collage.prototype.touchesCanvas = function(boundingBox){
+	var areaLeft = this.canvasLeft - (this.canvasWidth),
+		areaRight = this.canvasRight + (this.canvasWidth),
+		areaTop = this.canvasTop - (this.canvasHeight),
+		areaBottom = this.canvasBottom + (this.canvasHeight);
 
 	return (((areaLeft < boundingBox.left && boundingBox.left < areaRight) ||
 				(boundingBox.right < areaRight && areaLeft < boundingBox.right)) &&
@@ -328,7 +356,7 @@ Collage.prototype.fillCenter = function(){
 		checkY,
 
 		tryCount = 0,
-		tryLimit = this.scanTryLimit * 100,
+		tryLimit = this.scanTryLimit * 500,
 		missCount = 0,
 		missLimit = tryLimit / 100;
 
@@ -346,6 +374,7 @@ Collage.prototype.fillCenter = function(){
 		if(!this.quadtree.hasObject(checkX - this.elementMargin, checkY - this.elementMargin, this.checkWidth, this.checkHeight)){
 			missCount = 0;
 			this.insertNextElement(checkX, checkY, true);
+			if(!this.nextElement) this.pickNextElement();
 		}
 	}
 
@@ -353,6 +382,8 @@ Collage.prototype.fillCenter = function(){
 };
 
 Collage.prototype.fill = function(){
+	if(!this.nextElement) return this.pickNextElement();
+
 	this.updateCanvasDimensions();
 	this.updateScanDimensions();
 	
@@ -384,6 +415,7 @@ Collage.prototype.fill = function(){
 		existingObject = this.quadtree.hasObject(checkX - this.elementMargin, checkY - this.elementMargin, this.checkWidth, this.checkHeight);
 		if(!existingObject){
 			this.insertNextElement(checkX, checkY);
+			if(!this.nextElement) return;
 		}
 		
 		// FILL HORIZONTAL DIRECTIONS
@@ -400,6 +432,7 @@ Collage.prototype.fill = function(){
 		existingObject = this.quadtree.hasObject(checkX - this.elementMargin, checkY - this.elementMargin, this.checkWidth, this.checkHeight);
 		if(!existingObject){
 			this.insertNextElement(checkX, checkY);
+			if(!this.nextElement) return;
 		}
 	}
 

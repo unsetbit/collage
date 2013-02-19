@@ -1,21 +1,7 @@
 var Collection = require("./Collection.js"),
-	IframeElement = require('./element/iframe.js');
+	IframeElement = require('./element/Iframe.js');
 
-module.exports = function(container){
-	var collection = new TweetCollection(container);
-	return getApi(collection);
-};
-
-function getApi(collection){
-	var api = Collection.getApi(collection);
-
-	api.add = collection.add.bind(collection);
-	api.addByQuery = collection.addByQuery.bind(collection);
-
-	return api;
-};
-
-function TweetCollection(){
+var TweetCollection = module.exports = function(){
 	Collection.apply(this, arguments);
 	this.container = this.collage.element;
 	this.tweetArea = document.createElement("div");
@@ -30,6 +16,28 @@ function TweetCollection(){
 	});
 }
 TweetCollection.prototype = Object.create(Collection.prototype);
+
+TweetCollection.create = function(container, options){
+	options = options || {};
+	
+	var collection = new TweetCollection(container);
+
+	if(options.tryLimit) collection.tryLimit = options.tryLimit;
+	if(options.priority !== void 0) collection.priority = options.priority;
+	if(options.skipProbability !== void 0) collection.skipProbability = options.skipProbability;
+	if(!options.disabled) collection.enable();
+
+	return TweetCollection.getApi(collection);
+};
+
+TweetCollection.getApi = function(collection){
+	var api = Collection.getApi(collection);
+
+	api.add = collection.add.bind(collection);
+	api.addByQuery = collection.addByQuery.bind(collection);
+
+	return api;
+};
 
 TweetCollection.prototype.checkLoadStatus = function(){
 	var url, iframe;
@@ -56,12 +64,13 @@ TweetCollection.prototype.addByQuery = function(query){
 	
 	script.async = true;
 	script.src = src;
-	
+	this.setLoading();
 	callbacks[callbackId] = function(data){
 		delete callbacks[callbackId];
 		data.results.forEach(function(item){
 			self.add("https://twitter.com/" + item.from_user + "/status/" + item.id_str);
 		});
+		self.clearLoading();
 	}
 	
 	document.body.appendChild(script);

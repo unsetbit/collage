@@ -7,10 +7,11 @@ function VideoElement (video){
 	this.video = video;
 	
 
-	this.width = this.element.clientWidth;
-	this.height = this.element.clientHeight;
+	this.width = parseInt(this.element.getAttribute('width'));
+	this.height = parseInt(this.element.getAttribute('height'));
 	
 	this.locations = [];
+	this.hide();
 };
 
 VideoElement.prototype.hide = function(){

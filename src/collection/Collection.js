@@ -1,34 +1,49 @@
-var EventEmitter = require('eventEmitter/EventEmitter.js').EventEmitter;
+require('eventEmitter/EventEmitter.js');
 
-var Collection = module.exports = function(collage, disable){
+var Collection = module.exports = function(collage){
 	this.emitter = new EventEmitter();
 	this.collage = collage;
 	this.waiting = 0;
 	this.count = 0;
 	this.loaded = [];
 	this.resources = {};
-
-	if(disable){
-		this.disable();
-	} else {
-		this.enable();
-	}
 }
 
 Collection.getApi = function(collection){
 	var api = {};
 
-	api.element = collection.getRandom.bind(collection);
+	api.element = collection.getElement.bind(collection);
+	api.getNonvisibileElement = collection.getNonvisibileElement.bind(collection);
 	api.progress = collection.getProgress.bind(collection);
 	api.on = collection.emitter.on.bind(collection.emitter);
 	api.removeListener = collection.emitter.removeListener.bind(collection.emitter);
-	api.enable = collection.enable.bind(collection);
-	api.disable = collection.disable.bind(collection);
-	
+
+	Object.defineProperty(api, "elements", {
+		get: function(){ return collection.loaded.slice();}
+	});
+
+	Object.defineProperty(api, "tryLimit", {
+		get: function(){ return collection.tryLimit; },
+		set: function(value){
+			collection.tryLimit = value;
+		}
+	});
+
 	Object.defineProperty(api, "skipProbability", {
 		get: function(){ return collection.skipProbability; },
 		set: function(value){
 			collection.skipProbability = value;
+		}
+	});
+
+	Object.defineProperty(api, "enabled", {
+		get: function(){ return collection.enabled; },
+		set: function(value){
+			if(value){
+				collection.enable();
+			} else {
+				collection.disable();
+			}
 		}
 	});
 
@@ -47,7 +62,7 @@ Collection.getApi = function(collection){
 	return api;
 };
 
-Collection.prototype.enabled = true;
+Collection.prototype.enabled = false;
 Collection.prototype.tryLimit = 1;
 
 Collection.prototype.priority = -1 * Infinity;
@@ -78,8 +93,18 @@ Collection.prototype.markResource = function(id){
 	this.setLoading();
 };
 
+Collection.prototype.removeResource = function(id, resource){
+	if(!(id in this.resources)) return;
+	delete this.resources[id];
+
+	var index = this.loaded.indexOf(resource);
+	if(~index){
+		this.loaded.splice(index, 1);
+	}
+};
+
 Collection.prototype.addResource = function(id, resource){
-	if(!this.hasResource(id)) this.markResource(id);
+	if(!(id in this.resources)) this.markResource(id);
 
 	this.loaded.push(resource);
 	
@@ -110,16 +135,24 @@ Collection.prototype.getProgress = function(){
 	return this.loaded.length / this.count;	
 };
 
-Collection.prototype.getRandom = function(){
-	if(Math.random() < this.skipProbability) return;
+Collection.prototype.getNonvisibileElement = function(){
+	if(this.skipProbability > Math.random()) return;
 
 	var tryCount = 0,
-		element;
+		elementCount = this.loaded.length,
+		element,
+		index;
 
-	for(; tryCount < tryLimit; tryCount++){
-		element = this.loaded[(Math.random() * this.loaded.length)|0];
-		if(!this.collage.hasLocationNearViewport(element)){
+	if(!elementCount) return;
+
+	for(; tryCount < this.tryLimit; tryCount++){
+		element = this.getElement()
+		if(!element.locations.some(this.collage.touchesCanvas)){
 			return element;
 		}
 	}
+};
+
+Collection.prototype.getElement = function(){
+	return this.loaded[(Math.random() * this.loaded.length)|0];
 };

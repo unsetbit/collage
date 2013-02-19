@@ -316,37 +316,52 @@ var __m15 = function(module,exports){module.exports=exports;
 }(this));
 ;return module.exports;}({},{});
 var __m9 = function(module,exports){module.exports=exports;
-var EventEmitter = __m15.EventEmitter;
+__m15;
 
-var Collection = module.exports = function(collage, disable){
+var Collection = module.exports = function(collage){
 	this.emitter = new EventEmitter();
 	this.collage = collage;
 	this.waiting = 0;
 	this.count = 0;
 	this.loaded = [];
 	this.resources = {};
-
-	if(disable){
-		this.disable();
-	} else {
-		this.enable();
-	}
 }
 
 Collection.getApi = function(collection){
 	var api = {};
 
-	api.element = collection.getRandom.bind(collection);
+	api.element = collection.getElement.bind(collection);
+	api.getNonvisibileElement = collection.getNonvisibileElement.bind(collection);
 	api.progress = collection.getProgress.bind(collection);
 	api.on = collection.emitter.on.bind(collection.emitter);
 	api.removeListener = collection.emitter.removeListener.bind(collection.emitter);
-	api.enable = collection.enable.bind(collection);
-	api.disable = collection.disable.bind(collection);
-	
+
+	Object.defineProperty(api, "elements", {
+		get: function(){ return collection.loaded.slice();}
+	});
+
+	Object.defineProperty(api, "tryLimit", {
+		get: function(){ return collection.tryLimit; },
+		set: function(value){
+			collection.tryLimit = value;
+		}
+	});
+
 	Object.defineProperty(api, "skipProbability", {
 		get: function(){ return collection.skipProbability; },
 		set: function(value){
 			collection.skipProbability = value;
+		}
+	});
+
+	Object.defineProperty(api, "enabled", {
+		get: function(){ return collection.enabled; },
+		set: function(value){
+			if(value){
+				collection.enable();
+			} else {
+				collection.disable();
+			}
 		}
 	});
 
@@ -365,7 +380,7 @@ Collection.getApi = function(collection){
 	return api;
 };
 
-Collection.prototype.enabled = true;
+Collection.prototype.enabled = false;
 Collection.prototype.tryLimit = 1;
 
 Collection.prototype.priority = -1 * Infinity;
@@ -396,8 +411,18 @@ Collection.prototype.markResource = function(id){
 	this.setLoading();
 };
 
+Collection.prototype.removeResource = function(id, resource){
+	if(!(id in this.resources)) return;
+	delete this.resources[id];
+
+	var index = this.loaded.indexOf(resource);
+	if(~index){
+		this.loaded.splice(index, 1);
+	}
+};
+
 Collection.prototype.addResource = function(id, resource){
-	if(!this.hasResource(id)) this.markResource(id);
+	if(!(id in this.resources)) this.markResource(id);
 
 	this.loaded.push(resource);
 	
@@ -428,20 +453,27 @@ Collection.prototype.getProgress = function(){
 	return this.loaded.length / this.count;	
 };
 
-Collection.prototype.getRandom = function(){
-	if(Math.random() < this.skipProbability) return;
+Collection.prototype.getNonvisibileElement = function(){
+	if(this.skipProbability > Math.random()) return;
 
 	var tryCount = 0,
-		element;
+		elementCount = this.loaded.length,
+		element,
+		index;
 
-	for(; tryCount < tryLimit; tryCount++){
-		element = this.loaded[(Math.random() * this.loaded.length)|0];
-		if(!this.collage.hasLocationNearViewport(element)){
+	if(!elementCount) return;
+
+	for(; tryCount < this.tryLimit; tryCount++){
+		element = this.getElement()
+		if(!element.locations.some(this.collage.touchesCanvas)){
 			return element;
 		}
 	}
 };
 
+Collection.prototype.getElement = function(){
+	return this.loaded[(Math.random() * this.loaded.length)|0];
+};
 ;return module.exports;}({},{});
 var __m14 = function(module,exports){module.exports=exports;
 /*!
@@ -1066,10 +1098,11 @@ function VideoElement (video){
 	this.video = video;
 	
 
-	this.width = this.element.clientWidth;
-	this.height = this.element.clientHeight;
+	this.width = parseInt(this.element.getAttribute('width'));
+	this.height = parseInt(this.element.getAttribute('height'));
 	
 	this.locations = [];
+	this.hide();
 };
 
 VideoElement.prototype.hide = function(){
@@ -1092,25 +1125,31 @@ var __m8 = function(module,exports){module.exports=exports;
 var Collection = __m9,
 	VideoElement = __m13;
 
-module.exports = function(container){
-	var collection = new YoutubeCollection(container);
-	return getApi(collection);
-};
-
-function getApi(collection){
-	var api = Collection.getApi(collection);
-
-	api.add = collection.add.bind(collection);
-	
-	return api;
-}
-
-function YoutubeCollection(container){
+var YoutubeCollection = module.exports = function(){
 	Collection.apply(this, arguments);
 	this.container = this.collage.element;
 	this.documentFragment = document.createDocumentFragment();
 }
 YoutubeCollection.prototype = Object.create(Collection.prototype);
+
+YoutubeCollection.create = function(collage, options){
+	options = options || {};
+
+	var collection = new YoutubeCollection(collage);
+	
+	if(options.tryLimit) collection.tryLimit = options.tryLimit;
+	if(options.priority !== void 0) collection.priority = options.priority;
+	if(options.skipProbability !== void 0) collection.skipProbability = options.skipProbability;
+	if(!options.disabled) collection.enable();
+
+	return YoutubeCollection.getApi(collection);
+};
+
+YoutubeCollection.getApi = function(collection){
+	var api = Collection.getApi(collection);
+	api.add = collection.add.bind(collection);
+	return api;
+};
 
 YoutubeCollection.prototype.add = function(id, options){
 	if(this.hasResource(id)) return;
@@ -1121,119 +1160,264 @@ YoutubeCollection.prototype.add = function(id, options){
 	
 	this.markResource(id);
 
-	createYTPlayer({
+	createPlayer({
 		videoId: id,
 		container: this.container,
 		width: options.width,
 		height: options.height,
 		callback: function(player){
+			var element = new VideoElement(player);
+
 			if(options.loop) player.loop = true;
 
 			if(options.continuousPlay){
 				player.continuousPlay = true;
 				player.playVideo();
 			}
-
-			if(options.mute) player.mute();
-
-			self.addResource(id, new VideoElement(player));
+			
+			if(options.mute){
+				player.mute();
+				player.setVolume(0);
+			}
+			
+			self.addResource(id, element);
+			if(options.callback) options.callback(element);
 		}
 	});
 };
 
 // YOUTUBE player
 function createPlayer(options){
-  options = options || {};
-  var width = options.width || 1060,
-      height = options.height || 650;
+	options = options || {};
+	var width = options.width || 1060,
+	  height = options.height || 650;
 
-  var containerId = _.uniqueId('container');
-  var playerId = _.uniqueId('player'),
-    player;
-    
-  var element = $('<div class="video-container"><div id="' + playerId + '"></div><div class="video-mask"></div></div>')[0];
-  options.container.appendChild(element);
-  
-  new YT.Player(playerId, {
-    height: height,
-    width: width,
-    playerVars: { 'controls': 0 },
-    videoId: options.videoId,
-    events: {
-      onReady: function(e){
-        var playerObj = e.target;
+	var containerId = _.uniqueId('container');
+	var playerId = _.uniqueId('player'),
+	player;
 
-        if(player){ 
-          if(options.videoId) playerObj.cueVideoById(options.videoId);
-          return;
-        }
-        
-        player = new Player(playerObj, element);
-        if(options.videoId) playerObj.cueVideoById(options.videoId);
+	var element = $('<div class="video-container" width="' + width + '" height="' + height + '"><div id="' + playerId + '"></div><div class="video-mask"></div></div>')[0];
+	options.container.appendChild(element);
 
-        if(options.callback) {
-          options.callback(getApi(player));
-        }
-      },
-      onStateChange: function(e){
-      }
-    }
-  });
+	new YT.Player(playerId, {
+		height: height,
+		width: width,
+		playerVars: { 'controls': 0, 'html5': 1 },
+		videoId: options.videoId,
+		events: {
+			onReady: function(e){
+				var playerObj = e.target;
+
+				if(player){ 
+					if(options.videoId) playerObj.cueVideoById(options.videoId);
+					return;
+				}
+
+				player = new Player(playerObj, element);
+				if(options.videoId) playerObj.cueVideoById(options.videoId);
+
+				if(options.callback) {
+					options.callback(getApi(player));
+				}
+			},
+			onStateChange: function(e){}
+		}
+	});
 };
 
 function getApi(player){
-  var api = player.player;
-  api.element = player.element;
-  api.on = player.emitter.on.bind(player.emitter);
-  api.removeListener = player.emitter.removeListener.bind(player.emitter);
-  api.kill = player.kill.bind(player);
-  return api;
+	var api = player.player;
+	api.element = player.element;
+	api.on = player.emitter.on.bind(player.emitter);
+	api.removeListener = player.emitter.removeListener.bind(player.emitter);
+	api.kill = player.kill.bind(player);
+	return api;
 }
 
 function Player(player, element){
-  this.id = player.id;
-  this.player = player;
-  this.element = element;
-  this.lastReportedTime = 0;
-  this.emitter = new EventEmitter();
-  
-  player.addEventListener("onStateChange", _.bind(this.onStatusChange, this));
+	this.id = player.id;
+	this.player = player;
+	this.element = element;
+	this.lastReportedTime = 0;
+	this.emitter = new EventEmitter();
+
+	player.addEventListener("onStateChange", _.bind(this.onStatusChange, this));
 }
 
 Player.prototype.kill = function(){
-  this.container.parentNode.removeChild(this.container);
-  this.emitter.emit('dead');
+	this.container.parentNode.removeChild(this.container);
+	this.emitter.emit('dead');
 };
 
 Player.prototype.onStatusChange = function(status){
-  switch(status.data){
-    case -1:
-      this.emitter.emit('unstarted');
-    break;
-    case 0:
-      this.emitter.emit('ended');
-      if(this.player.loop){
-        this.player.seekTo(0);
-        this.player.playVideo();
-      }
-    break;
-    case 1:
-      this.emitter.emit('playing');
-    break;
-    case 2:
-      this.emitter.emit('paused');
-    break;
-    case 3:
-      this.emitter.emit('buffering');
-    break;
-    case 5:
-      this.emitter.emit('video cued');
-    break;
-  }
+	switch(status.data){
+		case -1:
+			this.emitter.emit('unstarted');
+		break;
+		case 0:
+			this.emitter.emit('ended');
+			
+			if(this.player.loop){
+				this.player.seekTo(0);
+				this.player.playVideo();
+			}
+		break;
+		case 1:
+			this.emitter.emit('playing');
+		break;
+		case 2:
+			this.emitter.emit('paused');
+		break;
+		case 3:
+			this.emitter.emit('buffering');
+		break;
+		case 5:
+			this.emitter.emit('video cued');
+		break;
+	}
+};
+;return module.exports;}({},{});
+var __m12 = function(module,exports){module.exports=exports;
+// Video elements can't be moved around the dom because they'll reset
+
+module.exports = IframeElement;
+
+function IframeElement (element){
+	this.element = element;
+	
+	this.width = this.element.clientWidth;
+	this.height = this.element.clientHeight;
+	
+	this.locations = [];
+	
+	this.hide();
+};
+
+IframeElement.prototype.hide = function(){
+	this.element.style.opacity = 0;
+};
+
+IframeElement.prototype.show = function(left, top){
+	this.element.style.opacity = 1;
+	this.element.style.left = left + "px";
+	this.element.style.top = top + "px";
 };
 
 ;return module.exports;}({},{});
-var __m12 = function(module,exports){module.exports=exports;
+var __m6 = function(module,exports){module.exports=exports;
+var Collection = __m9,
+	IframeElement = __m12;
+
+var TweetCollection = module.exports = function(){
+	Collection.apply(this, arguments);
+	this.container = this.collage.element;
+	this.tweetArea = document.createElement("div");
+	this.tweetArea.className = "tweet-area";
+	this.container.appendChild(this.tweetArea);
+	this.loading = [];
+
+	var self = this;
+	this.emitter.on("ready", function(){
+		clearInterval(self.checkLoadedInterval);
+		self.checkLoadedInterval = void 0;
+	});
+}
+TweetCollection.prototype = Object.create(Collection.prototype);
+
+TweetCollection.create = function(container, options){
+	options = options || {};
+	
+	var collection = new TweetCollection(container);
+
+	if(options.tryLimit) collection.tryLimit = options.tryLimit;
+	if(options.priority !== void 0) collection.priority = options.priority;
+	if(options.skipProbability !== void 0) collection.skipProbability = options.skipProbability;
+	if(!options.disabled) collection.enable();
+
+	return TweetCollection.getApi(collection);
+};
+
+TweetCollection.getApi = function(collection){
+	var api = Collection.getApi(collection);
+
+	api.add = collection.add.bind(collection);
+	api.addByQuery = collection.addByQuery.bind(collection);
+
+	return api;
+};
+
+TweetCollection.prototype.checkLoadStatus = function(){
+	var url, iframe;
+	
+	for(url in this.loading){
+		if(this.loading.hasOwnProperty(url)){
+			iframe = this.loading[url].iframe;
+			if(iframe  && iframe.clientHeight !== 0 && iframe.contentDocument && iframe.contentDocument.body.innerHTML !== ""){
+				this.loading[url].onload();
+				delete this.loading[url];
+			}
+		}
+	}
+};
+var SEARCH_ENDPOINT = "http://search.twitter.com/search.json?format=json";
+var callbackCounter = 0;
+var callbacks = {};
+window.TWITTER_CALLBACKS = callbacks;
+TweetCollection.prototype.addByQuery = function(query){
+	var self = this,
+		script = document.createElement("script"),
+		callbackId = "cb" + callbackCounter++,
+		src = SEARCH_ENDPOINT + "&callback=TWITTER_CALLBACKS." + callbackId + "&q=" + query; 
+	
+	script.async = true;
+	script.src = src;
+	this.setLoading();
+	callbacks[callbackId] = function(data){
+		delete callbacks[callbackId];
+		data.results.forEach(function(item){
+			self.add("https://twitter.com/" + item.from_user + "/status/" + item.id_str);
+		});
+		self.clearLoading();
+	}
+	
+	document.body.appendChild(script);
+};
+
+TweetCollection.prototype.add = function(url){
+	if(this.hasResource(url)) return;
+	
+	var self = this,
+		element = document.createElement("blockquote"),
+		anchor = document.createElement("a");
+	
+	element.className = "twitter-tweet";
+	
+	anchor.href = url;
+	element.appendChild(anchor);
+
+	this.tweetArea.appendChild(element);
+	twttr.widgets.load(this.tweetArea);
+	
+	var iframes = this.tweetArea.getElementsByTagName("iframe");
+	element = iframes[iframes.length - 1];
+	
+	this.markResource(url);
+
+	this.loading[url] = {
+		iframe: element,
+		onload: function(){
+			self.addResource(url, new IframeElement(element));
+		}
+	};
+
+	if(!this.checkLoadedInterval){
+		this.checkLoadedInterval = setInterval(function(){
+			self.checkLoadStatus();
+		},500);
+	}
+};
+;return module.exports;}({},{});
+var __m11 = function(module,exports){module.exports=exports;
 var endpoint = "http://api.flickr.com/services/feeds/photos_public.gne?format=json";
 var callbackCounter = 0;
 var callbacks = {};
@@ -1260,7 +1444,7 @@ module.exports = function(tags){
 	document.body.appendChild(script);	
 };
 ;return module.exports;}({},{});
-var __m11 = function(module,exports){module.exports=exports;
+var __m10 = function(module,exports){module.exports=exports;
 module.exports = StaticElement;
 
 function StaticElement (element){
@@ -1284,28 +1468,89 @@ StaticElement.prototype.show = function(left, top, container){
 	container.appendChild(this.element);
 };
 ;return module.exports;}({},{});
-var __m7 = function(module,exports){module.exports=exports;
+var __m5 = function(module,exports){module.exports=exports;
 var Collection = __m9,
-	StaticElement = __m11,
-	mustache = __m14;
+	StaticElement = __m10;
 
-module.exports = function(){
-	var collection = new NYTimesArticleCollection();
-	return getApi(collection);
+var ImageCollection = module.exports = function(){
+	Collection.apply(this, arguments);
+}
+
+ImageCollection.create = function(collage, options){
+	options = options || {};
+
+	var collection = new ImageCollection(collage);
+
+	if(options.tryLimit) collection.tryLimit = options.tryLimit;
+	if(options.priority !== void 0) collection.priority = options.priority;
+	if(options.skipProbability !== void 0) collection.skipProbability = options.skipProbability;
+	if(!options.disabled) collection.enable();
+
+	return ImageCollection.getApi(collection);
 };
+ImageCollection.prototype = Object.create(Collection.prototype);
 
-function getApi(collection){
+ImageCollection.getApi = function(collection){
 	var api = Collection.getApi(collection);
 
 	api.add = collection.add.bind(collection);
-	
+	api.loadFromFlickr = __m11.bind(collection);
+
 	return api;
 };
 
-function NYTimesArticleCollection(){
+var documentFragment = document.createDocumentFragment();
+
+ImageCollection.prototype.add = function(src){
+	if(this.hasResource(src)) return;
+	
+	var self = this,
+		img = new Image();
+	img.src = src;
+	
+	this.markResource(src);
+	
+	img.onload = function(){
+		// This forces FF to set the width/height
+		documentFragment.appendChild(img);
+		var item =  new StaticElement(img);
+		self.addResource(src, item);
+	};
+
+	img.onerror = function(){
+		self.clearLoading();
+		self.removeResource(src);
+	};
+};
+;return module.exports;}({},{});
+var __m7 = function(module,exports){module.exports=exports;
+var Collection = __m9,
+	StaticElement = __m10,
+	mustache = __m14;
+
+var NYTimesArticleCollection = module.exports = function(){
 	Collection.apply(this, arguments);
 }
 NYTimesArticleCollection.prototype = Object.create(Collection.prototype);
+
+NYTimesArticleCollection.create = function(collage, options){
+	options = options || {};
+
+	var collection = new NYTimesArticleCollection(collage);
+
+	if(options.tryLimit) collection.tryLimit = options.tryLimit;
+	if(options.priority !== void 0) collection.priority = options.priority;
+	if(options.skipProbability !== void 0) collection.skipProbability = options.skipProbability;
+	if(!options.disabled) collection.enable();
+
+	return NYTimesArticleCollection.getApi(collection);
+};
+
+NYTimesArticleCollection.getApi = function(collection){
+	var api = Collection.getApi(collection);
+	api.add = collection.add.bind(collection);
+	return api;
+};
 
 var ARTICLE_TEMPLATE = '' +
 		'<h2><a href="{{url}}">{{{title}}}</a></h2>' +
@@ -1357,182 +1602,11 @@ NYTimesArticleCollection.prototype.add = function(data){
 	});
 };
 ;return module.exports;}({},{});
-var __m5 = function(module,exports){module.exports=exports;
-var Collection = __m9,
-	StaticElement = __m11;
-
-module.exports = function(){
-	var collection = new ImageCollection();
-	return getApi(collection);
-};
-
-function getApi(collection){
-	var api = Collection.getApi(collection);
-
-	api.add = collection.add.bind(collection);
-	api.loadFromFlickr = __m12.bind(collection);
-
-	return api;
-};
-
-function ImageCollection(){
-	Collection.apply(this, arguments);
-}
-ImageCollection.prototype = Object.create(Collection.prototype);
-
-var documentFragment = document.createDocumentFragment();
-
-ImageCollection.prototype.add = function(src){
-	if(this.hasResource(src)) return;
-	
-	var self = this,
-		img = new Image();
-	img.src = src;
-	
-	this.markResource(src);
-	
-	img.onload = function(){
-		// This forces FF to set the width/height
-		documentFragment.appendChild(img);
-		self.addResource(src, new StaticElement(img));
-	}
-};
-;return module.exports;}({},{});
-var __m10 = function(module,exports){module.exports=exports;
-// Video elements can't be moved around the dom because they'll reset
-
-module.exports = IframeElement;
-
-function IframeElement (element){
-	this.element = element;
-	
-	this.width = this.element.clientWidth;
-	this.height = this.element.clientHeight;
-	this.locations = [];
-	
-	this.hide();
-};
-
-IframeElement.prototype.hide = function(){
-	this.element.style.opacity = 0;
-};
-
-IframeElement.prototype.show = function(left, top){
-	this.element.style.opacity = 1;
-	this.element.style.left = left + "px";
-	this.element.style.top = top + "px";
-};
-
-;return module.exports;}({},{});
-var __m6 = function(module,exports){module.exports=exports;
-var Collection = __m9,
-	IframeElement = __m10;
-
-module.exports = function(container){
-	var collection = new TweetCollection(container);
-	return getApi(collection);
-};
-
-function getApi(collection){
-	var api = Collection.getApi(collection);
-
-	api.add = collection.add.bind(collection);
-	api.addByQuery = collection.addByQuery.bind(collection);
-
-	return api;
-};
-
-function TweetCollection(){
-	Collection.apply(this, arguments);
-	this.container = this.collage.element;
-	this.tweetArea = document.createElement("div");
-	this.tweetArea.className = "tweet-area";
-	this.container.appendChild(this.tweetArea);
-	this.loading = [];
-
-	var self = this;
-	this.emitter.on("ready", function(){
-		clearInterval(self.checkLoadedInterval);
-		self.checkLoadedInterval = void 0;
-	});
-}
-TweetCollection.prototype = Object.create(Collection.prototype);
-
-TweetCollection.prototype.checkLoadStatus = function(){
-	var url, iframe;
-	
-	for(url in this.loading){
-		if(this.loading.hasOwnProperty(url)){
-			iframe = this.loading[url].iframe;
-			if(iframe  && iframe.clientHeight !== 0 && iframe.contentDocument && iframe.contentDocument.body.innerHTML !== ""){
-				this.loading[url].onload();
-				delete this.loading[url];
-			}
-		}
-	}
-};
-var SEARCH_ENDPOINT = "http://search.twitter.com/search.json?format=json";
-var callbackCounter = 0;
-var callbacks = {};
-window.TWITTER_CALLBACKS = callbacks;
-TweetCollection.prototype.addByQuery = function(query){
-	var self = this,
-		script = document.createElement("script"),
-		callbackId = "cb" + callbackCounter++,
-		src = SEARCH_ENDPOINT + "&callback=TWITTER_CALLBACKS." + callbackId + "&q=" + query; 
-	
-	script.async = true;
-	script.src = src;
-	
-	callbacks[callbackId] = function(data){
-		delete callbacks[callbackId];
-		data.results.forEach(function(item){
-			self.add("https://twitter.com/" + item.from_user + "/status/" + item.id_str);
-		});
-	}
-	
-	document.body.appendChild(script);
-};
-
-TweetCollection.prototype.add = function(url){
-	if(this.hasResource(url)) return;
-	
-	var self = this,
-		element = document.createElement("blockquote"),
-		anchor = document.createElement("a");
-	
-	element.className = "twitter-tweet";
-	
-	anchor.href = url;
-	element.appendChild(anchor);
-
-	this.tweetArea.appendChild(element);
-	twttr.widgets.load(this.tweetArea);
-	
-	var iframes = this.tweetArea.getElementsByTagName("iframe");
-	element = iframes[iframes.length - 1];
-	
-	this.markResource(url);
-
-	this.loading[url] = {
-		iframe: element,
-		onload: function(){
-			self.addResource(url, new IframeElement(element));
-		}
-	};
-
-	if(!this.checkLoadedInterval){
-		this.checkLoadedInterval = setInterval(function(){
-			self.checkLoadStatus();
-		},500);
-	}
-};
-;return module.exports;}({},{});
 var __m2 = function(module,exports){module.exports=exports;
-exports.image = __m5;
-exports.tweet = __m6;
-exports.nyTimesArticle = __m7;
-exports.youtube = __m8;
+exports.Image = __m5;
+exports.Tweet = __m6;
+exports.NYTimesArticle = __m7;
+exports.Youtube = __m8;
 ;return module.exports;}({},{});
 var __m4 = function(module,exports){module.exports=exports;
 ;module.exports = (function(){
@@ -1879,7 +1953,7 @@ Surface.prototype.setSpeedLimit = function(target, duration, easingFunc, callbac
 	}
 
 	this.setHorizontalSpeedLimit(target, duration, easingFunc, callback);
-	this.setVerticalSpeedLimit(target, duration, easingFunc, callback);
+	this.setVerticalSpeedLimit(target, duration, easingFunc);
 };
 
 Surface.prototype.setHorizontalSpeedLimit = function(target, duration, easingFunc, callback){
@@ -2437,14 +2511,16 @@ Collage.prototype = Object.create(Surface.prototype);
 
 Collage.create = function(container){
 	var collage = new Collage(container);
-	return getApi(collage);
+	return Collage.getApi(collage);
 };
 
 Collage.getApi = function(collage){
-	var api = createSurface.apiFactory(collage);
+	var api = Surface.getApi(collage);
 
-	api.hasLocationNearViewport = collage.hasLocationNearViewport.bind(collage);
-
+	api.touchesCanvas = collage.touchesCanvas.bind(collage);
+	api.addCollection = collage.addCollection.bind(collage);
+	api.removeCollection = collage.removeCollection.bind(collage);
+	
 	return api;
 };
 
@@ -2474,7 +2550,6 @@ Collage.prototype.step = function(){
 
 Collage.prototype.start = function(){
 	Surface.prototype.start.call(this);
-	
 	this.updateCanvasDimensions();
 	this.pickNextElement();
 	this.fillCenter();
@@ -2507,22 +2582,39 @@ Collage.prototype.removeCollection = function(collection){
 	return true; 
 };
 
+// Max attempts to find an element out of view before using one
+// that is in view
+Collage.prototype.pickNextElementFailSafe = 50;
+
 Collage.prototype.pickNextElement = function(){
-	var index = 0,
-		length = this.collections.length,
+	var failSafe = this.pickNextElementFailSafe,
+		collectionCount = this.collections.length,
 		element;
 	
-	for(; index < length; index++){
-		element = this.collections[index].element();
-		if(element) break;
+	while(!element && failSafe--){
+		element = this.collections[(Math.random() * collectionCount)|0].getNonvisibileElement();
+	}
+
+	if(!element){
+		failSafe = this.pickNextElementFailSafe;
+		while(!element && failSafe--){
+			element = this.collections[(Math.random() * collectionCount)|0].getElement();	
+			if(this.isVisible(element)) element = void 0;
+		}
 	}
 
 	this.nextElement = element;
 	this.missCount = 0;
+
+	
 	this.updateScanDimensions();
 };
 
 Collage.prototype.insertNextElement = function(left, top, show){
+	if(this.isVisible(this.nextElement)){
+		return this.pickNextElement();	
+	} 
+
 	var boundingBox = new BoundingBox(this.nextElement, left, top);
 	this.nextElement.locations.push(boundingBox);
 	
@@ -2537,12 +2629,22 @@ Collage.prototype.insertNextElement = function(left, top, show){
 	this.pickNextElement();
 };
 
-Collage.prototype.hasLocationNearViewport = function(element){
+Collage.prototype.isVisible = function(element){
 	var index = 0,
-		length = element.locations.length;
+		length = element.locations.length,
+		boundingBox,
+		areaLeft = this.canvasLeft,
+		areaRight = this.canvasRight,
+		areaTop = this.canvasTop,
+		areaBottom = this.canvasBottom;
 
 	for(; index < length; index++){
-		if(this.isNearViewport(element.locations[index])){
+		boundingBox = element.locations[index];
+		
+		if((((areaLeft < boundingBox.left && boundingBox.left < areaRight) ||
+				(boundingBox.right < areaRight && areaLeft < boundingBox.right)) &&
+			((areaTop < boundingBox.top && boundingBox.top < areaBottom) || 
+				(boundingBox.bottom < areaBottom && areaTop < boundingBox.bottom)))){
 			return true;
 		}
 	}
@@ -2550,11 +2652,11 @@ Collage.prototype.hasLocationNearViewport = function(element){
 	return false;
 };
 
-Collage.prototype.isNearViewport = function(boundingBox){
-	var areaLeft = this.canvasLeft - this.canvasWidth,
-		areaRight = this.canvasRight + this.canvasWidth,
-		areaTop = this.canvasTop - this.canvasHeight,
-		areaBottom = this.canvasBottom + this.canvasHeight;
+Collage.prototype.touchesCanvas = function(boundingBox){
+	var areaLeft = this.canvasLeft - (this.canvasWidth),
+		areaRight = this.canvasRight + (this.canvasWidth),
+		areaTop = this.canvasTop - (this.canvasHeight),
+		areaBottom = this.canvasBottom + (this.canvasHeight);
 
 	return (((areaLeft < boundingBox.left && boundingBox.left < areaRight) ||
 				(boundingBox.right < areaRight && areaLeft < boundingBox.right)) &&
@@ -2752,7 +2854,7 @@ Collage.prototype.fillCenter = function(){
 		checkY,
 
 		tryCount = 0,
-		tryLimit = this.scanTryLimit * 100,
+		tryLimit = this.scanTryLimit * 500,
 		missCount = 0,
 		missLimit = tryLimit / 100;
 
@@ -2770,6 +2872,7 @@ Collage.prototype.fillCenter = function(){
 		if(!this.quadtree.hasObject(checkX - this.elementMargin, checkY - this.elementMargin, this.checkWidth, this.checkHeight)){
 			missCount = 0;
 			this.insertNextElement(checkX, checkY, true);
+			if(!this.nextElement) this.pickNextElement();
 		}
 	}
 
@@ -2777,6 +2880,8 @@ Collage.prototype.fillCenter = function(){
 };
 
 Collage.prototype.fill = function(){
+	if(!this.nextElement) return this.pickNextElement();
+
 	this.updateCanvasDimensions();
 	this.updateScanDimensions();
 	
@@ -2808,6 +2913,7 @@ Collage.prototype.fill = function(){
 		existingObject = this.quadtree.hasObject(checkX - this.elementMargin, checkY - this.elementMargin, this.checkWidth, this.checkHeight);
 		if(!existingObject){
 			this.insertNextElement(checkX, checkY);
+			if(!this.nextElement) return;
 		}
 		
 		// FILL HORIZONTAL DIRECTIONS
@@ -2824,6 +2930,7 @@ Collage.prototype.fill = function(){
 		existingObject = this.quadtree.hasObject(checkX - this.elementMargin, checkY - this.elementMargin, this.checkWidth, this.checkHeight);
 		if(!existingObject){
 			this.insertNextElement(checkX, checkY);
+			if(!this.nextElement) return;
 		}
 	}
 

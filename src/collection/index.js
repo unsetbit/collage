@@ -1,4 +1,4 @@
-exports.image = require('./image.js');
-exports.tweet = require('./tweet.js');
-exports.nyTimesArticle = require('./nyTimesArticle.js');
-exports.youtube = require('./youtube.js');
+exports.Image = require('./Image.js');
+exports.Tweet = require('./Tweet.js');
+exports.NYTimesArticle = require('./NYTimesArticle.js');
+exports.Youtube = require('./Youtube.js');

@@ -1,24 +1,30 @@
 var Collection = require("./Collection.js"),
-	StaticElement = require("./element/static.js"),
+	StaticElement = require("./element/Static.js"),
 	mustache = require("mustache/mustache.js");
 
-module.exports = function(){
-	var collection = new NYTimesArticleCollection();
-	return getApi(collection);
-};
-
-function getApi(collection){
-	var api = Collection.getApi(collection);
-
-	api.add = collection.add.bind(collection);
-	
-	return api;
-};
-
-function NYTimesArticleCollection(){
+var NYTimesArticleCollection = module.exports = function(){
 	Collection.apply(this, arguments);
 }
 NYTimesArticleCollection.prototype = Object.create(Collection.prototype);
+
+NYTimesArticleCollection.create = function(collage, options){
+	options = options || {};
+
+	var collection = new NYTimesArticleCollection(collage);
+
+	if(options.tryLimit) collection.tryLimit = options.tryLimit;
+	if(options.priority !== void 0) collection.priority = options.priority;
+	if(options.skipProbability !== void 0) collection.skipProbability = options.skipProbability;
+	if(!options.disabled) collection.enable();
+
+	return NYTimesArticleCollection.getApi(collection);
+};
+
+NYTimesArticleCollection.getApi = function(collection){
+	var api = Collection.getApi(collection);
+	api.add = collection.add.bind(collection);
+	return api;
+};
 
 var ARTICLE_TEMPLATE = '' +
 		'<h2><a href="{{url}}">{{{title}}}</a></h2>' +

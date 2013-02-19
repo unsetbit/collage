@@ -1,12 +1,25 @@
 var Collection = require("./Collection.js"),
-	StaticElement = require("./element/static.js");
+	StaticElement = require("./element/Static.js");
 
-module.exports = function(){
-	var collection = new ImageCollection();
-	return getApi(collection);
+var ImageCollection = module.exports = function(){
+	Collection.apply(this, arguments);
+}
+
+ImageCollection.create = function(collage, options){
+	options = options || {};
+
+	var collection = new ImageCollection(collage);
+
+	if(options.tryLimit) collection.tryLimit = options.tryLimit;
+	if(options.priority !== void 0) collection.priority = options.priority;
+	if(options.skipProbability !== void 0) collection.skipProbability = options.skipProbability;
+	if(!options.disabled) collection.enable();
+
+	return ImageCollection.getApi(collection);
 };
+ImageCollection.prototype = Object.create(Collection.prototype);
 
-function getApi(collection){
+ImageCollection.getApi = function(collection){
 	var api = Collection.getApi(collection);
 
 	api.add = collection.add.bind(collection);
@@ -14,11 +27,6 @@ function getApi(collection){
 
 	return api;
 };
-
-function ImageCollection(){
-	Collection.apply(this, arguments);
-}
-ImageCollection.prototype = Object.create(Collection.prototype);
 
 var documentFragment = document.createDocumentFragment();
 
@@ -34,6 +42,12 @@ ImageCollection.prototype.add = function(src){
 	img.onload = function(){
 		// This forces FF to set the width/height
 		documentFragment.appendChild(img);
-		self.addResource(src, new StaticElement(img));
-	}
+		var item =  new StaticElement(img);
+		self.addResource(src, item);
+	};
+
+	img.onerror = function(){
+		self.clearLoading();
+		self.removeResource(src);
+	};
 };

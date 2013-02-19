@@ -3,16 +3,16 @@ module.exports = function(grunt) {
   grunt.initConfig({
     hug: {
       client: {
-        src: './src/collage.js',
+        src: './src/Collage.js',
         dest: 'dist/collage-expanded.js',
         exportedVariable: 'Collage',
-        exports: './src/collage.js',
+        exports: './src/Collage.js',
         path: ['./components']
       },
       clientExport: {
-        src: './src/collage.js',
+        src: './src/Collage.js',
         dest: 'dist/collage-module.js',
-        exports: './src/collage.js',
+        exports: './src/Collage.js',
         path: ['./components']
       }
     }, 

@@ -7,6 +7,7 @@ function IframeElement (element){
 	
 	this.width = this.element.clientWidth;
 	this.height = this.element.clientHeight;
+	
 	this.locations = [];
 	
 	this.hide();

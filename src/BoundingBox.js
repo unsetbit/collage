@@ -6,6 +6,8 @@ var BoundingBox = module.exports = function(element, left, top){
 	this.height = this.element.height;
 	this.bottom = this.top + this.height;
 	this.right = this.left + this.width;
+
+	element.locations.push(this);
 }
 
 BoundingBox.prototype.show = function(container){

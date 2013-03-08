@@ -1,5 +1,321 @@
 ;Collage = (function(){
 var __m18 = function(module,exports){module.exports=exports;
+/**
+ * EventEmitter v4.0.5 - git.io/ee
+ * Oliver Caldwell
+ * MIT license
+ * @preserve
+ */
+
+;(function(exports) {
+    // JSHint config - http://www.jshint.com/
+    /*jshint laxcomma:true*/
+    /*global define:true*/
+
+    // Place the script in strict mode
+    'use strict';
+
+    /**
+     * Class for managing events.
+     * Can be extended to provide event functionality in other classes.
+     *
+     * @class Manages event registering and emitting.
+     */
+    function EventEmitter(){}
+
+    // Shortcuts to improve speed and size
+
+        // Easy access to the prototype
+    var proto = EventEmitter.prototype
+
+      // Existence of a native indexOf
+      , nativeIndexOf = Array.prototype.indexOf ? true : false;
+
+    /**
+     * Finds the index of the listener for the event in it's storage array
+     *
+     * @param {Function} listener Method to look for.
+     * @param {Function[]} listeners Array of listeners to search through.
+     * @return {Number} Index of the specified listener, -1 if not found
+     */
+    function indexOfListener(listener, listeners) {
+        // Return the index via the native method if possible
+        if(nativeIndexOf) {
+            return listeners.indexOf(listener);
+        }
+
+        // There is no native method
+        // Use a manual loop to find the index
+        var i = listeners.length;
+        while(i--) {
+            // If the listener matches, return it's index
+            if(listeners[i] === listener) {
+                return i;
+            }
+        }
+
+        // Default to returning -1
+        return -1;
+    }
+
+    /**
+     * Fetches the events object and creates one if required.
+     *
+     * @return {Object} The events storage object.
+     */
+    proto._getEvents = function() {
+        return this._events || (this._events = {});
+    };
+
+    /**
+     * Returns the listener array for the specified event.
+     * Will initialise the event object and listener arrays if required.
+     *
+     * @param {String} evt Name of the event to return the listeners from.
+     * @return {Function[]} All listener functions for the event.
+     * @doc
+     */
+    proto.getListeners = function(evt) {
+        // Create a shortcut to the storage object
+        // Initialise it if it does not exists yet
+        var events = this._getEvents();
+
+        // Return the listener array
+        // Initialise it if it does not exist
+        return events[evt] || (events[evt] = []);
+    };
+
+    /**
+     * Adds a listener function to the specified event.
+     * The listener will not be added if it is a duplicate.
+     * If the listener returns true then it will be removed after it is called.
+     *
+     * @param {String} evt Name of the event to attach the listener to.
+     * @param {Function} listener Method to be called when the event is emitted. If the function returns true then it will be removed after calling.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     * @doc
+     */
+    proto.addListener = function(evt, listener) {
+        // Fetch the listeners
+        var listeners = this.getListeners(evt);
+
+        // Push the listener into the array if it is not already there
+        if(indexOfListener(listener, listeners) === -1) {
+            listeners.push(listener);
+        }
+
+        // Return the instance of EventEmitter to allow chaining
+        return this;
+    };
+
+    /**
+     * Alias of addListener
+     * @doc
+     */
+    proto.on = proto.addListener;
+
+    /**
+     * Removes a listener function from the specified event.
+     *
+     * @param {String} evt Name of the event to remove the listener from.
+     * @param {Function} listener Method to remove from the event.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     * @doc
+     */
+    proto.removeListener = function(evt, listener) {
+        // Fetch the listeners
+        // And get the index of the listener in the array
+        var listeners = this.getListeners(evt)
+          , index = indexOfListener(listener, listeners);
+
+        // If the listener was found then remove it
+        if(index !== -1) {
+            listeners.splice(index, 1);
+
+            // If there are no more listeners in this array then remove it
+            if(listeners.length === 0) {
+                this.removeEvent(evt);
+            }
+        }
+
+        // Return the instance of EventEmitter to allow chaining
+        return this;
+    };
+
+    /**
+     * Alias of removeListener
+     * @doc
+     */
+    proto.off = proto.removeListener;
+
+    /**
+     * Adds listeners in bulk using the manipulateListeners method.
+     * If you pass an object as the second argument you can add to multiple events at once. The object should contain key value pairs of events and listeners or listener arrays.
+     * You can also pass it an event name and an array of listeners to be added.
+     *
+     * @param {String|Object} evt An event name if you will pass an array of listeners next. An object if you wish to add to multiple events at once.
+     * @param {Function[]} [listeners] An optional array of listener functions to add.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     * @doc
+     */
+    proto.addListeners = function(evt, listeners) {
+        // Pass through to manipulateListeners
+        return this.manipulateListeners(false, evt, listeners);
+    };
+
+    /**
+     * Removes listeners in bulk using the manipulateListeners method.
+     * If you pass an object as the second argument you can remove from multiple events at once. The object should contain key value pairs of events and listeners or listener arrays.
+     * You can also pass it an event name and an array of listeners to be removed.
+     *
+     * @param {String|Object} evt An event name if you will pass an array of listeners next. An object if you wish to remove from multiple events at once.
+     * @param {Function[]} [listeners] An optional array of listener functions to remove.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     * @doc
+     */
+    proto.removeListeners = function(evt, listeners) {
+        // Pass through to manipulateListeners
+        return this.manipulateListeners(true, evt, listeners);
+    };
+
+    /**
+     * Edits listeners in bulk. The addListeners and removeListeners methods both use this to do their job. You should really use those instead, this is a little lower level.
+     * The first argument will determine if the listeners are removed (true) or added (false).
+     * If you pass an object as the second argument you can add/remove from multiple events at once. The object should contain key value pairs of events and listeners or listener arrays.
+     * You can also pass it an event name and an array of listeners to be added/removed.
+     *
+     * @param {Boolean} remove True if you want to remove listeners, false if you want to add.
+     * @param {String|Object} evt An event name if you will pass an array of listeners next. An object if you wish to add/remove from multiple events at once.
+     * @param {Function[]} [listeners] An optional array of listener functions to add/remove.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     * @doc
+     */
+    proto.manipulateListeners = function(remove, evt, listeners) {
+        // Initialise any required variables
+        var i
+          , value
+          , single = remove ? this.removeListener : this.addListener
+          , multiple = remove ? this.removeListeners : this.addListeners;
+
+        // If evt is an object then pass each of it's properties to this method
+        if(typeof evt === 'object') {
+            for(i in evt) {
+                if(evt.hasOwnProperty(i) && (value = evt[i])) {
+                    // Pass the single listener straight through to the singular method
+                    if(typeof value === 'function') {
+                        single.call(this, i, value);
+                    }
+                    else {
+                        // Otherwise pass back to the multiple function
+                        multiple.call(this, i, value);
+                    }
+                }
+            }
+        }
+        else {
+            // So evt must be a string
+            // And listeners must be an array of listeners
+            // Loop over it and pass each one to the multiple method
+            i = listeners.length;
+            while(i--) {
+                single.call(this, evt, listeners[i]);
+            }
+        }
+
+        // Return the instance of EventEmitter to allow chaining
+        return this;
+    };
+
+    /**
+     * Removes all listeners from a specified event.
+     * If you do not specify an event then all listeners will be removed.
+     * That means every event will be emptied.
+     *
+     * @param {String} [evt] Optional name of the event to remove all listeners for. Will remove from every event if not passed.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     * @doc
+     */
+    proto.removeEvent = function(evt) {
+        // Remove different things depending on the state of evt
+        if(evt) {
+            // Remove all listeners for the specified event
+            delete this._getEvents()[evt];
+        }
+        else {
+            // Remove all listeners in all events
+            delete this._events;
+        }
+
+        // Return the instance of EventEmitter to allow chaining
+        return this;
+    };
+
+    /**
+     * Emits an event of your choice.
+     * When emitted, every listener attached to that event will be executed.
+     * If you pass the optional argument array then those arguments will be passed to every listener upon execution.
+     * Because it uses `apply`, your array of arguments will be passed as if you wrote them out separately.
+     * So they will not arrive within the array on the other side, they will be separate.
+     *
+     * @param {String} evt Name of the event to emit and execute listeners for.
+     * @param {Array} [args] Optional array of arguments to be passed to each listener.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     * @doc
+     */
+    proto.emitEvent = function(evt, args) {
+        // Get the listeners for the event
+        // Also initialise any other required variables
+        var listeners = this.getListeners(evt)
+          , i = listeners.length
+          , response;
+
+        // Loop over all listeners assigned to the event
+        // Apply the arguments array to each listener function
+        while(i--) {
+            // If the listener returns true then it shall be removed from the event
+            // The function is executed either with a basic call or an apply if there is an args array
+            response = args ? listeners[i].apply(null, args) : listeners[i]();
+            if(response === true) {
+                this.removeListener(evt, listeners[i]);
+            }
+        }
+
+        // Return the instance of EventEmitter to allow chaining
+        return this;
+    };
+
+    /**
+     * Alias of emitEvent
+     * @doc
+     */
+    proto.trigger = proto.emitEvent;
+
+    /**
+     * Subtly different from emitEvent in that it will pass its arguments on to the listeners, as
+     * opposed to taking a single array of arguments to pass on.
+     *
+     * @param {String} evt Name of the event to emit and execute listeners for.
+     * @param {...*} Optional additional arguments to be passed to each listener.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     * @doc
+     */
+    proto.emit = function(evt) {
+        var args = Array.prototype.slice.call(arguments, 1);
+        return this.emitEvent(evt, args);
+    };
+
+    // Expose the class either via AMD or the global object
+    if(typeof define === 'function' && define.amd) {
+        define(function() {
+            return EventEmitter;
+        });
+    }
+    else {
+        exports.EventEmitter = EventEmitter;
+    }
+}(this));
+;return module.exports;}({},{});
+var __m17 = function(module,exports){module.exports=exports;
 /*!
  * mustache.js - Logic-less {{mustache}} templates with JavaScript
  * http://github.com/janl/mustache.js
@@ -612,322 +928,6 @@ var __m18 = function(module,exports){module.exports=exports;
 }())));
 
 ;return module.exports;}({},{});
-var __m17 = function(module,exports){module.exports=exports;
-/**
- * EventEmitter v4.0.5 - git.io/ee
- * Oliver Caldwell
- * MIT license
- * @preserve
- */
-
-;(function(exports) {
-    // JSHint config - http://www.jshint.com/
-    /*jshint laxcomma:true*/
-    /*global define:true*/
-
-    // Place the script in strict mode
-    'use strict';
-
-    /**
-     * Class for managing events.
-     * Can be extended to provide event functionality in other classes.
-     *
-     * @class Manages event registering and emitting.
-     */
-    function EventEmitter(){}
-
-    // Shortcuts to improve speed and size
-
-        // Easy access to the prototype
-    var proto = EventEmitter.prototype
-
-      // Existence of a native indexOf
-      , nativeIndexOf = Array.prototype.indexOf ? true : false;
-
-    /**
-     * Finds the index of the listener for the event in it's storage array
-     *
-     * @param {Function} listener Method to look for.
-     * @param {Function[]} listeners Array of listeners to search through.
-     * @return {Number} Index of the specified listener, -1 if not found
-     */
-    function indexOfListener(listener, listeners) {
-        // Return the index via the native method if possible
-        if(nativeIndexOf) {
-            return listeners.indexOf(listener);
-        }
-
-        // There is no native method
-        // Use a manual loop to find the index
-        var i = listeners.length;
-        while(i--) {
-            // If the listener matches, return it's index
-            if(listeners[i] === listener) {
-                return i;
-            }
-        }
-
-        // Default to returning -1
-        return -1;
-    }
-
-    /**
-     * Fetches the events object and creates one if required.
-     *
-     * @return {Object} The events storage object.
-     */
-    proto._getEvents = function() {
-        return this._events || (this._events = {});
-    };
-
-    /**
-     * Returns the listener array for the specified event.
-     * Will initialise the event object and listener arrays if required.
-     *
-     * @param {String} evt Name of the event to return the listeners from.
-     * @return {Function[]} All listener functions for the event.
-     * @doc
-     */
-    proto.getListeners = function(evt) {
-        // Create a shortcut to the storage object
-        // Initialise it if it does not exists yet
-        var events = this._getEvents();
-
-        // Return the listener array
-        // Initialise it if it does not exist
-        return events[evt] || (events[evt] = []);
-    };
-
-    /**
-     * Adds a listener function to the specified event.
-     * The listener will not be added if it is a duplicate.
-     * If the listener returns true then it will be removed after it is called.
-     *
-     * @param {String} evt Name of the event to attach the listener to.
-     * @param {Function} listener Method to be called when the event is emitted. If the function returns true then it will be removed after calling.
-     * @return {Object} Current instance of EventEmitter for chaining.
-     * @doc
-     */
-    proto.addListener = function(evt, listener) {
-        // Fetch the listeners
-        var listeners = this.getListeners(evt);
-
-        // Push the listener into the array if it is not already there
-        if(indexOfListener(listener, listeners) === -1) {
-            listeners.push(listener);
-        }
-
-        // Return the instance of EventEmitter to allow chaining
-        return this;
-    };
-
-    /**
-     * Alias of addListener
-     * @doc
-     */
-    proto.on = proto.addListener;
-
-    /**
-     * Removes a listener function from the specified event.
-     *
-     * @param {String} evt Name of the event to remove the listener from.
-     * @param {Function} listener Method to remove from the event.
-     * @return {Object} Current instance of EventEmitter for chaining.
-     * @doc
-     */
-    proto.removeListener = function(evt, listener) {
-        // Fetch the listeners
-        // And get the index of the listener in the array
-        var listeners = this.getListeners(evt)
-          , index = indexOfListener(listener, listeners);
-
-        // If the listener was found then remove it
-        if(index !== -1) {
-            listeners.splice(index, 1);
-
-            // If there are no more listeners in this array then remove it
-            if(listeners.length === 0) {
-                this.removeEvent(evt);
-            }
-        }
-
-        // Return the instance of EventEmitter to allow chaining
-        return this;
-    };
-
-    /**
-     * Alias of removeListener
-     * @doc
-     */
-    proto.off = proto.removeListener;
-
-    /**
-     * Adds listeners in bulk using the manipulateListeners method.
-     * If you pass an object as the second argument you can add to multiple events at once. The object should contain key value pairs of events and listeners or listener arrays.
-     * You can also pass it an event name and an array of listeners to be added.
-     *
-     * @param {String|Object} evt An event name if you will pass an array of listeners next. An object if you wish to add to multiple events at once.
-     * @param {Function[]} [listeners] An optional array of listener functions to add.
-     * @return {Object} Current instance of EventEmitter for chaining.
-     * @doc
-     */
-    proto.addListeners = function(evt, listeners) {
-        // Pass through to manipulateListeners
-        return this.manipulateListeners(false, evt, listeners);
-    };
-
-    /**
-     * Removes listeners in bulk using the manipulateListeners method.
-     * If you pass an object as the second argument you can remove from multiple events at once. The object should contain key value pairs of events and listeners or listener arrays.
-     * You can also pass it an event name and an array of listeners to be removed.
-     *
-     * @param {String|Object} evt An event name if you will pass an array of listeners next. An object if you wish to remove from multiple events at once.
-     * @param {Function[]} [listeners] An optional array of listener functions to remove.
-     * @return {Object} Current instance of EventEmitter for chaining.
-     * @doc
-     */
-    proto.removeListeners = function(evt, listeners) {
-        // Pass through to manipulateListeners
-        return this.manipulateListeners(true, evt, listeners);
-    };
-
-    /**
-     * Edits listeners in bulk. The addListeners and removeListeners methods both use this to do their job. You should really use those instead, this is a little lower level.
-     * The first argument will determine if the listeners are removed (true) or added (false).
-     * If you pass an object as the second argument you can add/remove from multiple events at once. The object should contain key value pairs of events and listeners or listener arrays.
-     * You can also pass it an event name and an array of listeners to be added/removed.
-     *
-     * @param {Boolean} remove True if you want to remove listeners, false if you want to add.
-     * @param {String|Object} evt An event name if you will pass an array of listeners next. An object if you wish to add/remove from multiple events at once.
-     * @param {Function[]} [listeners] An optional array of listener functions to add/remove.
-     * @return {Object} Current instance of EventEmitter for chaining.
-     * @doc
-     */
-    proto.manipulateListeners = function(remove, evt, listeners) {
-        // Initialise any required variables
-        var i
-          , value
-          , single = remove ? this.removeListener : this.addListener
-          , multiple = remove ? this.removeListeners : this.addListeners;
-
-        // If evt is an object then pass each of it's properties to this method
-        if(typeof evt === 'object') {
-            for(i in evt) {
-                if(evt.hasOwnProperty(i) && (value = evt[i])) {
-                    // Pass the single listener straight through to the singular method
-                    if(typeof value === 'function') {
-                        single.call(this, i, value);
-                    }
-                    else {
-                        // Otherwise pass back to the multiple function
-                        multiple.call(this, i, value);
-                    }
-                }
-            }
-        }
-        else {
-            // So evt must be a string
-            // And listeners must be an array of listeners
-            // Loop over it and pass each one to the multiple method
-            i = listeners.length;
-            while(i--) {
-                single.call(this, evt, listeners[i]);
-            }
-        }
-
-        // Return the instance of EventEmitter to allow chaining
-        return this;
-    };
-
-    /**
-     * Removes all listeners from a specified event.
-     * If you do not specify an event then all listeners will be removed.
-     * That means every event will be emptied.
-     *
-     * @param {String} [evt] Optional name of the event to remove all listeners for. Will remove from every event if not passed.
-     * @return {Object} Current instance of EventEmitter for chaining.
-     * @doc
-     */
-    proto.removeEvent = function(evt) {
-        // Remove different things depending on the state of evt
-        if(evt) {
-            // Remove all listeners for the specified event
-            delete this._getEvents()[evt];
-        }
-        else {
-            // Remove all listeners in all events
-            delete this._events;
-        }
-
-        // Return the instance of EventEmitter to allow chaining
-        return this;
-    };
-
-    /**
-     * Emits an event of your choice.
-     * When emitted, every listener attached to that event will be executed.
-     * If you pass the optional argument array then those arguments will be passed to every listener upon execution.
-     * Because it uses `apply`, your array of arguments will be passed as if you wrote them out separately.
-     * So they will not arrive within the array on the other side, they will be separate.
-     *
-     * @param {String} evt Name of the event to emit and execute listeners for.
-     * @param {Array} [args] Optional array of arguments to be passed to each listener.
-     * @return {Object} Current instance of EventEmitter for chaining.
-     * @doc
-     */
-    proto.emitEvent = function(evt, args) {
-        // Get the listeners for the event
-        // Also initialise any other required variables
-        var listeners = this.getListeners(evt)
-          , i = listeners.length
-          , response;
-
-        // Loop over all listeners assigned to the event
-        // Apply the arguments array to each listener function
-        while(i--) {
-            // If the listener returns true then it shall be removed from the event
-            // The function is executed either with a basic call or an apply if there is an args array
-            response = args ? listeners[i].apply(null, args) : listeners[i]();
-            if(response === true) {
-                this.removeListener(evt, listeners[i]);
-            }
-        }
-
-        // Return the instance of EventEmitter to allow chaining
-        return this;
-    };
-
-    /**
-     * Alias of emitEvent
-     * @doc
-     */
-    proto.trigger = proto.emitEvent;
-
-    /**
-     * Subtly different from emitEvent in that it will pass its arguments on to the listeners, as
-     * opposed to taking a single array of arguments to pass on.
-     *
-     * @param {String} evt Name of the event to emit and execute listeners for.
-     * @param {...*} Optional additional arguments to be passed to each listener.
-     * @return {Object} Current instance of EventEmitter for chaining.
-     * @doc
-     */
-    proto.emit = function(evt) {
-        var args = Array.prototype.slice.call(arguments, 1);
-        return this.emitEvent(evt, args);
-    };
-
-    // Expose the class either via AMD or the global object
-    if(typeof define === 'function' && define.amd) {
-        define(function() {
-            return EventEmitter;
-        });
-    }
-    else {
-        exports.EventEmitter = EventEmitter;
-    }
-}(this));
-;return module.exports;}({},{});
 var __m16 = function(module,exports){module.exports=exports;
 module.exports = Element;
 
@@ -1046,7 +1046,7 @@ StaticElement.prototype.show = function(left, top, container){
 };
 ;return module.exports;}({},{});
 var __m15 = function(module,exports){module.exports=exports;
-__m17;
+__m18;
 var Element = __m16;
 
 module.exports = VideoElement;
@@ -1172,7 +1172,7 @@ VideoElement.prototype.statusChangeHandler = function(status){
 	}
 }
 ;return module.exports;}({},{});
-var __m5 = function(module,exports){module.exports=exports;
+var __m6 = function(module,exports){module.exports=exports;
 exports.Iframe = __m13;
 exports.Simple = __m14;
 exports.Video = __m15;
@@ -1613,449 +1613,6 @@ Surface.prototype.updateMultiAttributeStyle = function(styleName, attributes, wi
 ;return module.exports;}({},{});return __m0;}());
 ;return module.exports;}({},{});
 var __m7 = function(module,exports){module.exports=exports;
-;module.exports = (function(){
-var __m1 = function(module,exports){module.exports=exports;
-module.exports = Node;
-
-function Node(left, top, width, height, parent){
-	this.objects = [];
-
-	this.left = left;
-	this.top = top;
-	this.width = width;
-	this.height = height;
-	this.parent = parent;
-}
-
-Node.prototype.tl = void 0;
-Node.prototype.tr = void 0;
-Node.prototype.br = void 0;
-Node.prototype.bl = void 0;
-
-Node.prototype.OBJECT_LIMIT = 200;
-
-Node.prototype.clear = function(){
-	this.objects = [];
-
-	if(this.tl){
-		this.tl.clear();
-		this.tr.clear();
-		this.br.clear();
-		this.bl.clear();
-	}
-};
-
-Node.prototype.getObjects = function(){
-	if(this.tl){
-		return this.objects.concat(this.tl.getObjects(), this.tr.getObjects(), this.br.getObjects(), this.bl.getObjects());
-	} else {
-		return this.objects.slice();
-	}
-};
-
-Node.prototype.split = function(){
-	var childWidth = this.width / 2,
-		childHeight = this.height / 2,
-		left = this.left,
-		top = this.top;
-
-	this.tl = new Node(left, top, childWidth, childHeight, this);
-	this.tr = new Node(left + childWidth, top, childWidth, childHeight, this);
-	this.br = new Node(left + childWidth, top + childHeight, childWidth, childHeight, this);
-	this.bl = new Node(left, top + childHeight, childWidth, childHeight, this);
-};
-
-// This can be called from ANY node in the tree, it'll return the top most node of the tree
-// that can contain the element (it will grow the tree if nescessary)
-Node.prototype.parentNode = function(obj){
-	var node = this,
-		parent;
-
-	// If object is left of this node
-	if(obj.left < node.left){
-		// If object is to the top of this node
-		if(obj.top < node.top){
-			// Grow towards top left
-			parent = node.grow(node.width, node.height);
-		} else {
-			// Grow towards bottom left
-			parent = node.grow(node.width, 0);
-		}
-	// If object is right of this node
-	} else if(obj.left + obj.width > node.left + node.width){
-		// If object is to the top of this node
-		if(obj.top < node.top){
-			// Grow towards top right
-			parent = node.grow(0, node.height);
-		} else {
-			// Grow towards bottom right
-			parent = node.grow(0, 0);
-		} 
-
-	// If object is within x-axis but top of node
-	} else if(obj.top < node.top){
-		// Grow towards top right (top left is just as valid though)
-		parent = node.grow(0, node.height);
-	// If object is within x-axis but bottom of node
-	} else if(obj.top + obj.height > node.top + node.height){
-		// Grow towards bottom right (bottom left is just as valid though)
-		parent = node.grow(0, 0);
-	}
-	
-	// If we had to grow, find the quadrant in the parent
-	if(parent){
-		return parent.parentNode(obj);
-	}
-
-	return node;
-};
-
-// Helper function which gets the quadrant node at a given x/y position
-// caller function has to check to see if this node is split before calling this
-Node.prototype.getQuadrantAt = function(x, y){
-	if(!this.tl) return this;
-
-	var xMid = this.left + this.width / 2,
-		yMid = this.top + this.height / 2;
-
-	if(x < xMid){
-		if(y < yMid){
-			return this.tl.tl && this.tl.getQuadrantAt(x, y) || this.tl;
-		} else {
-			return this.bl.tl && this.bl.getQuadrantAt(x, y) || this.bl;
-		}
-	} else {
-		if(y < yMid){
-			return this.tr.tl && this.tr.getQuadrantAt(x, y) || this.tr;
-		} else {
-			return this.br.tl && this.br.getQuadrantAt(x, y) || this.br;
-		}
-	}
-};
-
-// Gets all the objects in quadrants within the given dimensions. 
-// This assumes that the given dimensions can't be larger than a quadrant, 
-// meaning it can at most touch 4 quadrants
-Node.prototype.getInteractableObjects = function(left, top, width, height){
-	if(!this.tl) return this.objects.slice();	
-
-	var node = this.getQuadrant(left, top, width, height),
-		objectsList = [node.objects],
-		quadrants = [node], // Keeps track to prevent dupes
-		parent = node.parent;
-
-	while(parent){
-		objectsList.push(parent.objects);
-		quadrants.push(parent);
-		parent = parent.parent;
-	}
-
-	if(node.tl){
-		// top left corner
-		var quadrant = node.getQuadrantAt(left, top);
-		if(!~quadrants.indexOf(quadrant)){
-			quadrants.push(quadrant);
-			objectsList.push(quadrant.objects);
-
-			if(quadrant.parent && !~quadrants.indexOf(quadrant.parent)){
-				quadrants.push(quadrant.parent);
-				objectsList.push(quadrant.parent.objects);	
-			}
-		}
-		
-		// top right corner
-		quadrant = node.getQuadrantAt(left + width, top);
-		if(!~quadrants.indexOf(quadrant)){
-			quadrants.push(quadrant);
-			objectsList.push(quadrant.objects);
-
-			if(quadrant.parent && !~quadrants.indexOf(quadrant.parent)){
-				quadrants.push(quadrant.parent);
-				objectsList.push(quadrant.parent.objects);	
-			}
-		}
-
-		// bottom right corner
-		quadrant = node.getQuadrantAt(left + width, top + height);
-		if(!~quadrants.indexOf(quadrant)){
-			quadrants.push(quadrant);
-			objectsList.push(quadrant.objects);
-
-			if(quadrant.parent && !~quadrants.indexOf(quadrant.parent)){
-				quadrants.push(quadrant.parent);
-				objectsList.push(quadrant.parent.objects);	
-			}
-		}
-
-		// bottom left corner
-		quadrant = node.getQuadrantAt(left, top + height);
-		if(!~quadrants.indexOf(quadrant)){
-			quadrants.push(quadrant);
-			objectsList.push(quadrant.objects);
-			if(quadrant.parent && !~quadrants.indexOf(quadrant.parent)) objectsList.push(quadrant.parent.objects);
-		}
-	}
-
-	return Array.prototype.concat.apply([], objectsList);
-};
-
-// Gets the quadrant a given bounding box dimensions would be inserted into
-Node.prototype.getQuadrant = function(left, top, width, height){
-	if(!this.tl) return this;
-
-	var	xMid = this.left + this.width / 2,
-		yMid = this.top + this.height / 2,
-		topQuadrant = (top < yMid) && ((top + height) < yMid),
-		bottomQuadrand = top > yMid;
-
-	if((left < xMid) && ((left + width) < xMid)){
-		if(topQuadrant){
-			return this.tl.tl && this.tl.getQuadrant(left, top, width, height) || this.tl;
-		} else if(bottomQuadrand){
-			return this.bl.tl && this.bl.getQuadrant(left, top, width, height) || this.bl;
-		}
-	} else if(left > xMid){
-		if(topQuadrant){
-			return this.tr.tl && this.tr.getQuadrant(left, top, width, height) || this.tr;
-		} else if(bottomQuadrand) {
-			return this.br.tl && this.br.getQuadrant(left, top, width, height) || this.br;
-		}
-	}
-
-	return this;
-};
-
-// Inserts the object to the Node, spliting or growing the tree if nescessary
-// Returns the top-most node of this tree
-Node.prototype.insert = function(obj){
-	var quadrant,
-		index,
-		length,
-		remainingObjects,
-		objects,
-		node;
-
-	// This call will grow the tree if nescessary and return the parent node
-	// if the tree doesn't need to grow, `node` will be `this`.
-	node = this.parentNode(obj);
-	quadrant = node.getQuadrant(obj.left, obj.top, obj.width, obj.height);
-
-	if(quadrant !== node){
-		quadrant.insert(obj);
-	} else {
-		objects = node.objects;
-		objects.push(obj);
-		index = 0;
-		length = objects.length;
-		if(length > node.OBJECT_LIMIT){
-			// Split if not already split
-			if(!node.tl) node.split();
-
-			// For objects that don't fit to quadrants
-			remainingObjects = [];
-		
-			// Iterate through all object and try to put them in a
-			// Quadrant node, if that doesn't work, retain them	
-			for(; index < length; index++){
-
-				// Reusing the obj var
-				obj = node.objects[index];
-				quadrant = node.getQuadrant(obj.left, obj.top, obj.width, obj.height);
-				if(quadrant !== node){
-					quadrant.insert(obj);
-				} else {
-					remainingObjects.push(obj);
-				}
-			}
-
-			node.objects = remainingObjects;
-		}
-	}
-
-	return node;
-};
-
-// Creates a pre-split parent Node and attaches this Node as a
-// node at the given x/y offset (so 0,0 would make this Node the top left node)
-Node.prototype.grow = function(xOffset, yOffset){
-	var left = this.left - xOffset,
-		top = this.top - yOffset,
-		parent = new Node(left, top, this.width * 2, this.height * 2);
-	
-	this.parent = parent;
-
-	if(xOffset){
-		if(yOffset){
-			parent.br = this;
-		} else {
-			parent.tr = this;
-		}
-	} else if(yOffset) {
-		parent.bl = this;
-	} else {
-		parent.tl = this;
-	}
-
-	parent.tl = parent.tl || new Node(left, top, this.width, this.height, this);
-	parent.tr = parent.tr || new Node(left + this.width, top, this.width, this.height, this);
-	parent.br = parent.br || new Node(left + this.width, top + this.height, this.width, this.height, this);
-	parent.bl = parent.bl || new Node(left, top + this.height, this.width, this.height, this);
-
-	return parent;
-};
-
-
-;return module.exports;}({},{});
-var __m0 = function(module,exports){module.exports=exports;
-var Node = __m1;
-
-/* Quadtree by Ozan Turgut (ozanturgut@gmail.com)
-
-   A Quadtree is a structure for managing many nodes interacting in space by
-   organizing them within a tree, where each node contains elements which may
-   interact with other elements within the node. This is particularly useful in
-   collision detection, in which a brute-force algorithm requires the checking of
-   every element against every other element, regardless of their distance in space.
-
-   This quadtree handles object in 2d space by their bounding boxes. It splits
-   a node once it exceeds the object limit per-node. When a node is split, it's
-   contents are divied up in to 4 smaller nodes to fulfill the per-node object limit.
-   Nodes are infinitely divisible.
-
-   If an object is inserted which exceeds the bounds of this quadtree, the quadtree
-   will grow in the direction the object was inserted in order to encapsulate it. This is
-   similar to a node split, except in this case we create a parent node and assign the existing
-   quadtree as a quadrant within it. This allows the quadtree to contain any object, regardless of
-   it's position in space.
-
-   One function is exported which creates a quadtree given a width and height.
-
-   The quadtree api has two methods:
-
-   insert(bounds)
-   		Inserts a bounding box (it should contain an left, top, width, and height property).
-
-   	retrieve(bounds)
-   		Retrieves a list of bounding boxes that share a node with the given bounds object.
-*/
-
-var Quadtree = module.exports = function(width, height){
-	if(width){
-		this.width = width;
-		this.height = height? height : width;
-	}
-	
-	this.reset();
-};
-
-Quadtree.create = function(width, height){
-	var quadtree = new Quadtree(width, height);
-	return Quadtree.getApi(quadtree);
-};
-
-Quadtree.getApi = function(quadtree){
-	var api = {};
-	api.insert = quadtree.insert.bind(quadtree);
-	api.reset = quadtree.reset.bind(quadtree);
-	api.getObjects = quadtree.getObjects.bind(quadtree);
-	api.hasObject = quadtree.hasObject.bind(quadtree);
-	api.prune = quadtree.prune.bind(quadtree);
-
-	return api;
-};
-
-Quadtree.prototype.width = 10000;
-Quadtree.prototype.height = 10000;
-
-Quadtree.prototype.reset = function(x, y){
-	x = x || 0;
-	y = y || 0;
-
-	var negHalfWidth = -(this.width / 2);
-	var negHalfHeight = -(this.height / 2);
-	this.top = new Node(x + negHalfWidth, y + negHalfHeight, this.width, this.height);
-};
-
-Quadtree.prototype.insert = function(obj){
-	this.top = this.top.insert(obj);
-};
-
-Quadtree.prototype.getObjects = function(left, top, width, height){
-	if(left){
-		return this.top.getInteractableObjects(left, top, width, height);
-	}
-
-	return this.top.getObjects();
-};
-
-Quadtree.prototype.prune = function(left, top, width, height){
-	var right = left + width,
-		bottom = top + height,
-		candidate,
-		rejectedObjects = [];
-		keptObjects = [];
-
-	var objects = this.top.getObjects(),
-		index = 0,
-		length = objects.length;
-
-	for(; index < length; index++){
-		candidate = objects[index];
-
-		if(	candidate.left < left || 
-			candidate.top < top || 
-			(candidate.left + candidate.width) > right ||
-			(candidate.top + candidate.height) > bottom){
-			rejectedObjects.push(candidate);
-		} else {
-			keptObjects.push(candidate);
-		}
-	}
-	if(keptObjects.length){
-		this.reset(keptObjects[0].left, keptObjects[0].top);
-		index = 0;
-		length = keptObjects.length;
-		for(; index < length; index++){
-			this.insert(keptObjects[index]);
-		}
-	} else {
-		this.reset();
-	}
-	
-	return rejectedObjects;
-};
-
-
-// Checks for collisions against a quadree
-Quadtree.prototype.hasObject = function(left, top, width, height){
-	var rectangles = this.top.getInteractableObjects(left, top, width, height),
-		length = rectangles.length,
-		index = 0,
-		rectangle;
-
-	for(; index < length; index++){
-		rectangle = rectangles[index];
-		
-		// If there is intersection along the y-axis
-		if((top < rectangle.top ?
-			((top + height) > rectangle.top) :
-			((rectangle.top + rectangle.height) > top)) && 
-				// And if there is intersection along the x-axis
-				(left < rectangle.left ?
-					((left + width) > rectangle.left) :
-					((rectangle.left + rectangle.width) > left))){
-			
-			// Then we have a collision
-			return rectangle;
-		}
-	}
-	
-	return false;
-};
-
-;return module.exports;}({},{});return __m0;}());
-;return module.exports;}({},{});
-var __m6 = function(module,exports){module.exports=exports;
 // vim:ts=4:sts=4:sw=4:
 /*!
  *
@@ -3627,8 +3184,8 @@ var qEndingLine = captureLine();
 });
 
 ;return module.exports;}({},{});
-var __m10 = function(module,exports){module.exports=exports;
-var Q = __m6;
+var __m9 = function(module,exports){module.exports=exports;
+var Q = __m7;
 var SimpleElement = __m14;
 
 var documentFragment = document.createDocumentFragment();
@@ -3650,9 +3207,9 @@ module.exports = function(src){
 	return deferred.promise;
 };
 ;return module.exports;}({},{});
-var __m9 = function(module,exports){module.exports=exports;
-var Q = __m6;
-var loadImage = __m10;
+var __m10 = function(module,exports){module.exports=exports;
+var Q = __m7;
+var loadImage = __m9;
 
 var endpoint = "http://api.flickr.com/services/feeds/photos_public.gne?format=json";
 var callbackCounter = 0;
@@ -3686,10 +3243,60 @@ module.exports = function(tags){
 	return deferred.promise;
 };
 ;return module.exports;}({},{});
-var __m11 = function(module,exports){module.exports=exports;
-__m17;
+var __m12 = function(module,exports){module.exports=exports;
+var Q = __m7,
+	SimpleElement = __m14,
+	mustache = __m17;
 
-var Q = __m6;
+var ARTICLE_TEMPLATE = '' +
+		'<h2><a href="{{url}}">{{{title}}}</a></h2>' +
+		'{{#image}}<img class="article-image" src="{{image.src}}" width="{{image.width}}" height="{{image.height}}"/>{{/image}}' + 
+		'<div class="article-attribution">' +
+			'<img class="nyt-brand" src="http://graphics8.nytimes.com/packages/images/developer/logos/poweredby_nytimes_30a.png"/>' +
+			'<span class="byline">{{{byline}}}</span>' + 
+			'<span class="date">{{date}}</span>' + 
+		'</div>' +
+		'<p>{{{body}}}</p>';
+
+var documentFragment = document.createDocumentFragment();
+
+module.exports = function(data){
+	var self = this,
+		element = document.createElement("div");
+	
+	element.className = "nytimes-article";
+
+	var templateData = {
+		title: data.title,
+		byline: data.byline,
+		date: (new Date(data.publication_year, data.publication_month, data.publication_day)).toLocaleDateString(),
+		body: data.body,
+		url: data.url
+	};
+
+	if(data.small_image_url){
+		templateData.image = {
+			src: data.small_image_url.replace(/thumbStandard.*\./, "hpMedium."),
+			height: 253,
+			width: 337
+		};
+	}
+
+	element.innerHTML = mustache.render(ARTICLE_TEMPLATE, templateData);
+	document.body.appendChild(element);
+
+	element.width = element.clientWidth;
+	element.height = element.clientHeight;
+
+	documentFragment.appendChild(element);
+
+	return	Q.resolve(new SimpleElement(element));
+};
+;return module.exports;}({},{});
+var __m11 = function(module,exports){module.exports=exports;
+__m18;
+
+var Q = __m7;
 var VideoElement = __m15;
 
 module.exports = function(options){
@@ -3815,63 +3422,13 @@ Player.prototype.onStatusChange = function(status){
 	}
 };
 ;return module.exports;}({},{});
-var __m12 = function(module,exports){module.exports=exports;
-var Q = __m6,
-	SimpleElement = __m14,
-	mustache = __m18;
-
-var ARTICLE_TEMPLATE = '' +
-		'<h2><a href="{{url}}">{{{title}}}</a></h2>' +
-		'{{#image}}<img class="article-image" src="{{image.src}}" width="{{image.width}}" height="{{image.height}}"/>{{/image}}' + 
-		'<div class="article-attribution">' +
-			'<img class="nyt-brand" src="http://graphics8.nytimes.com/packages/images/developer/logos/poweredby_nytimes_30a.png"/>' +
-			'<span class="byline">{{{byline}}}</span>' + 
-			'<span class="date">{{date}}</span>' + 
-		'</div>' +
-		'<p>{{{body}}}</p>';
-
-var documentFragment = document.createDocumentFragment();
-
-module.exports = function(data){
-	var self = this,
-		element = document.createElement("div");
-	
-	element.className = "nytimes-article";
-
-	var templateData = {
-		title: data.title,
-		byline: data.byline,
-		date: (new Date(data.publication_year, data.publication_month, data.publication_day)).toLocaleDateString(),
-		body: data.body,
-		url: data.url
-	};
-
-	if(data.small_image_url){
-		templateData.image = {
-			src: data.small_image_url.replace(/thumbStandard.*\./, "hpMedium."),
-			height: 253,
-			width: 337
-		};
-	}
-
-	element.innerHTML = mustache.render(ARTICLE_TEMPLATE, templateData);
-	document.body.appendChild(element);
-
-	element.width = element.clientWidth;
-	element.height = element.clientHeight;
-
-	documentFragment.appendChild(element);
-
-	return	Q.resolve(new SimpleElement(element));
-};
-;return module.exports;}({},{});
-var __m4 = function(module,exports){module.exports=exports;
-exports.flickr = __m9;
-exports.image = __m10;
+var __m5 = function(module,exports){module.exports=exports;
+exports.flickr = __m10;
+exports.image = __m9;
 exports.youtube = __m11;
 exports.nyTimes = __m12;
 ;return module.exports;}({},{});
-var __m3 = function(module,exports){module.exports=exports;
+var __m4 = function(module,exports){module.exports=exports;
 module.exports = Tag;
 
 function Tag(){
@@ -3916,7 +3473,7 @@ Tag.prototype.getRandomElement = function(){
 
 
 ;return module.exports;}({},{});
-var __m2 = function(module,exports){module.exports=exports;
+var __m3 = function(module,exports){module.exports=exports;
 var BoundingBox = module.exports = function(element, left, top){
 	this.element = element;
 	this.top = top || 0;
@@ -3930,16 +3487,20 @@ var BoundingBox = module.exports = function(element, left, top){
 }
 
 BoundingBox.prototype.show = function(container){
+	if(this.visible) return;
+	
 	this.visible = true;
 	this.element.show(this.left, this.top, container);
 };
 
 BoundingBox.prototype.hide = function(container){
+	if(!this.visible) return;
+
 	this.visible = false;
 	this.element.hide(container);
 };
 ;return module.exports;}({},{});
-var __m1 = function(module,exports){module.exports=exports;
+var __m2 = function(module,exports){module.exports=exports;
 ;module.exports = (function(){
 var __m3 = function(module,exports){module.exports=exports;
 /**
@@ -4793,14 +4354,482 @@ Surface.prototype.updateMultiAttributeStyle = function(styleName, attributes, wi
 
 ;return module.exports;}({},{});return __m0;}());
 ;return module.exports;}({},{});
+var __m1 = function(module,exports){module.exports=exports;
+;module.exports = (function(){
+var __m1 = function(module,exports){module.exports=exports;
+module.exports = Node;
+
+function Node(left, top, width, height, parent){
+	this.objects = [];
+
+	this.left = left;
+	this.top = top;
+	this.width = width;
+	this.height = height;
+	this.parent = parent;
+}
+
+Node.prototype.tl = void 0;
+Node.prototype.tr = void 0;
+Node.prototype.br = void 0;
+Node.prototype.bl = void 0;
+
+Node.prototype.OBJECT_LIMIT = 200;
+
+Node.prototype.clear = function(){
+	this.objects = [];
+
+	if(this.tl){
+		this.tl.clear();
+		this.tr.clear();
+		this.br.clear();
+		this.bl.clear();
+	}
+};
+
+Node.prototype.getObjects = function(){
+	if(this.tl){
+		return this.objects.concat(this.tl.getObjects(), this.tr.getObjects(), this.br.getObjects(), this.bl.getObjects());
+	} else {
+		return this.objects.slice();
+	}
+};
+
+Node.prototype.split = function(){
+	var childWidth = this.width / 2,
+		childHeight = this.height / 2,
+		left = this.left,
+		top = this.top;
+
+	this.tl = new Node(left, top, childWidth, childHeight, this);
+	this.tr = new Node(left + childWidth, top, childWidth, childHeight, this);
+	this.br = new Node(left + childWidth, top + childHeight, childWidth, childHeight, this);
+	this.bl = new Node(left, top + childHeight, childWidth, childHeight, this);
+};
+
+// This can be called from ANY node in the tree, it'll return the top most node of the tree
+// that can contain the element (it will grow the tree if nescessary)
+Node.prototype.parentNode = function(obj){
+	var node = this,
+		parent;
+
+	// If object is left of this node
+	if(obj.left < node.left){
+		// If object is to the top of this node
+		if(obj.top < node.top){
+			// Grow towards top left
+			parent = node.grow(node.width, node.height);
+		} else {
+			// Grow towards bottom left
+			parent = node.grow(node.width, 0);
+		}
+	// If object is right of this node
+	} else if(obj.left + obj.width > node.left + node.width){
+		// If object is to the top of this node
+		if(obj.top < node.top){
+			// Grow towards top right
+			parent = node.grow(0, node.height);
+		} else {
+			// Grow towards bottom right
+			parent = node.grow(0, 0);
+		} 
+
+	// If object is within x-axis but top of node
+	} else if(obj.top < node.top){
+		// Grow towards top right (top left is just as valid though)
+		parent = node.grow(0, node.height);
+	// If object is within x-axis but bottom of node
+	} else if(obj.top + obj.height > node.top + node.height){
+		// Grow towards bottom right (bottom left is just as valid though)
+		parent = node.grow(0, 0);
+	}
+	
+	// If we had to grow, find the quadrant in the parent
+	if(parent){
+		return parent.parentNode(obj);
+	}
+
+	return node;
+};
+
+// Helper function which gets the quadrant node at a given x/y position
+// caller function has to check to see if this node is split before calling this
+Node.prototype.getQuadrantAt = function(x, y){
+	if(!this.tl) return this;
+
+	var xMid = this.left + this.width / 2,
+		yMid = this.top + this.height / 2;
+
+	if(x < xMid){
+		if(y < yMid){
+			return this.tl.tl && this.tl.getQuadrantAt(x, y) || this.tl;
+		} else {
+			return this.bl.tl && this.bl.getQuadrantAt(x, y) || this.bl;
+		}
+	} else {
+		if(y < yMid){
+			return this.tr.tl && this.tr.getQuadrantAt(x, y) || this.tr;
+		} else {
+			return this.br.tl && this.br.getQuadrantAt(x, y) || this.br;
+		}
+	}
+};
+
+// Gets all the objects in quadrants within the given dimensions. 
+// This assumes that the given dimensions can't be larger than a quadrant, 
+// meaning it can at most touch 4 quadrants
+Node.prototype.getInteractableObjects = function(left, top, width, height){
+	if(!this.tl) return this.objects.slice();	
+
+	var node = this.getQuadrant(left, top, width, height),
+		objectsList = [node.objects],
+		quadrants = [node], // Keeps track to prevent dupes
+		parent = node.parent;
+
+	while(parent){
+		objectsList.push(parent.objects);
+		quadrants.push(parent);
+		parent = parent.parent;
+	}
+
+	if(node.tl){
+		// top left corner
+		var quadrant = node.getQuadrantAt(left, top);
+		if(!~quadrants.indexOf(quadrant)){
+			quadrants.push(quadrant);
+			objectsList.push(quadrant.objects);
+
+			if(quadrant.parent && !~quadrants.indexOf(quadrant.parent)){
+				quadrants.push(quadrant.parent);
+				objectsList.push(quadrant.parent.objects);	
+			}
+		}
+		
+		// top right corner
+		quadrant = node.getQuadrantAt(left + width, top);
+		if(!~quadrants.indexOf(quadrant)){
+			quadrants.push(quadrant);
+			objectsList.push(quadrant.objects);
+
+			if(quadrant.parent && !~quadrants.indexOf(quadrant.parent)){
+				quadrants.push(quadrant.parent);
+				objectsList.push(quadrant.parent.objects);	
+			}
+		}
+
+		// bottom right corner
+		quadrant = node.getQuadrantAt(left + width, top + height);
+		if(!~quadrants.indexOf(quadrant)){
+			quadrants.push(quadrant);
+			objectsList.push(quadrant.objects);
+
+			if(quadrant.parent && !~quadrants.indexOf(quadrant.parent)){
+				quadrants.push(quadrant.parent);
+				objectsList.push(quadrant.parent.objects);	
+			}
+		}
+
+		// bottom left corner
+		quadrant = node.getQuadrantAt(left, top + height);
+		if(!~quadrants.indexOf(quadrant)){
+			quadrants.push(quadrant);
+			objectsList.push(quadrant.objects);
+			if(quadrant.parent && !~quadrants.indexOf(quadrant.parent)) objectsList.push(quadrant.parent.objects);
+		}
+	}
+
+	return Array.prototype.concat.apply([], objectsList);
+};
+
+// Gets the quadrant a given bounding box dimensions would be inserted into
+Node.prototype.getQuadrant = function(left, top, width, height){
+	if(!this.tl) return this;
+
+	var	xMid = this.left + this.width / 2,
+		yMid = this.top + this.height / 2,
+		topQuadrant = (top < yMid) && ((top + height) < yMid),
+		bottomQuadrand = top > yMid;
+
+	if((left < xMid) && ((left + width) < xMid)){
+		if(topQuadrant){
+			return this.tl.tl && this.tl.getQuadrant(left, top, width, height) || this.tl;
+		} else if(bottomQuadrand){
+			return this.bl.tl && this.bl.getQuadrant(left, top, width, height) || this.bl;
+		}
+	} else if(left > xMid){
+		if(topQuadrant){
+			return this.tr.tl && this.tr.getQuadrant(left, top, width, height) || this.tr;
+		} else if(bottomQuadrand) {
+			return this.br.tl && this.br.getQuadrant(left, top, width, height) || this.br;
+		}
+	}
+
+	return this;
+};
+
+// Inserts the object to the Node, spliting or growing the tree if nescessary
+// Returns the top-most node of this tree
+Node.prototype.insert = function(obj){
+	var quadrant,
+		index,
+		length,
+		remainingObjects,
+		objects,
+		node;
+
+	// This call will grow the tree if nescessary and return the parent node
+	// if the tree doesn't need to grow, `node` will be `this`.
+	node = this.parentNode(obj);
+	quadrant = node.getQuadrant(obj.left, obj.top, obj.width, obj.height);
+
+	if(quadrant !== node){
+		quadrant.insert(obj);
+	} else {
+		objects = node.objects;
+		objects.push(obj);
+		index = 0;
+		length = objects.length;
+		if(length > node.OBJECT_LIMIT){
+			// Split if not already split
+			if(!node.tl) node.split();
+
+			// For objects that don't fit to quadrants
+			remainingObjects = [];
+		
+			// Iterate through all object and try to put them in a
+			// Quadrant node, if that doesn't work, retain them	
+			for(; index < length; index++){
+
+				// Reusing the obj var
+				obj = node.objects[index];
+				quadrant = node.getQuadrant(obj.left, obj.top, obj.width, obj.height);
+				if(quadrant !== node){
+					quadrant.insert(obj);
+				} else {
+					remainingObjects.push(obj);
+				}
+			}
+
+			node.objects = remainingObjects;
+		}
+	}
+
+	return node;
+};
+
+// Creates a pre-split parent Node and attaches this Node as a
+// node at the given x/y offset (so 0,0 would make this Node the top left node)
+Node.prototype.grow = function(xOffset, yOffset){
+	var left = this.left - xOffset,
+		top = this.top - yOffset,
+		parent = new Node(left, top, this.width * 2, this.height * 2);
+	
+	this.parent = parent;
+
+	if(xOffset){
+		if(yOffset){
+			parent.br = this;
+		} else {
+			parent.tr = this;
+		}
+	} else if(yOffset) {
+		parent.bl = this;
+	} else {
+		parent.tl = this;
+	}
+
+	parent.tl = parent.tl || new Node(left, top, this.width, this.height, this);
+	parent.tr = parent.tr || new Node(left + this.width, top, this.width, this.height, this);
+	parent.br = parent.br || new Node(left + this.width, top + this.height, this.width, this.height, this);
+	parent.bl = parent.bl || new Node(left, top + this.height, this.width, this.height, this);
+
+	return parent;
+};
+
+
+;return module.exports;}({},{});
 var __m0 = function(module,exports){module.exports=exports;
-var Q = __m6;
-var createQuadtree = __m7.create,
-	Surface = __m1;
+var Node = __m1;
+
+/* Quadtree by Ozan Turgut (ozanturgut@gmail.com)
+
+   A Quadtree is a structure for managing many nodes interacting in space by
+   organizing them within a tree, where each node contains elements which may
+   interact with other elements within the node. This is particularly useful in
+   collision detection, in which a brute-force algorithm requires the checking of
+   every element against every other element, regardless of their distance in space.
+
+   This quadtree handles object in 2d space by their bounding boxes. It splits
+   a node once it exceeds the object limit per-node. When a node is split, it's
+   contents are divied up in to 4 smaller nodes to fulfill the per-node object limit.
+   Nodes are infinitely divisible.
+
+   If an object is inserted which exceeds the bounds of this quadtree, the quadtree
+   will grow in the direction the object was inserted in order to encapsulate it. This is
+   similar to a node split, except in this case we create a parent node and assign the existing
+   quadtree as a quadrant within it. This allows the quadtree to contain any object, regardless of
+   its position in space.
+
+   One function is exported which creates a quadtree given a width and height.
+
+   The quadtree api has two methods:
+
+   insert(bounds)
+   		Inserts a bounding box (it should contain an left, top, width, and height property).
+
+   	retrieve(bounds)
+   		Retrieves a list of bounding boxes that share a node with the given bounds object.
+*/
+
+var Quadtree = module.exports = function(width, height){
+	if(width){
+		this.width = width;
+		this.height = height? height : width;
+	}
+	
+	this.reset();
+};
+
+Quadtree.create = function(width, height){
+	var quadtree = new Quadtree(width, height);
+	return Quadtree.getApi(quadtree);
+};
+
+Quadtree.getApi = function(quadtree){
+	var api = {};
+	api.insert = quadtree.insert.bind(quadtree);
+	api.reset = quadtree.reset.bind(quadtree);
+	api.getObjects = quadtree.getObjects.bind(quadtree);
+	api.hasObject = quadtree.hasObject.bind(quadtree);
+	api.prune = quadtree.prune.bind(quadtree);
+
+	return api;
+};
+
+Quadtree.prototype.width = 10000;
+Quadtree.prototype.height = 10000;
+
+Quadtree.prototype.reset = function(x, y){
+	x = x || 0;
+	y = y || 0;
+
+	var negHalfWidth = -(this.width / 2);
+	var negHalfHeight = -(this.height / 2);
+	this.top = new Node(x + negHalfWidth, y + negHalfHeight, this.width, this.height);
+};
+
+Quadtree.prototype.insert = function(obj){
+	this.top = this.top.insert(obj);
+};
+
+Quadtree.prototype.getObjects = function(left, top, width, height){
+	if(left !== void 0){
+		var rectangles = this.top.getInteractableObjects(left, top, width, height),
+			rectangleIndex = rectangles.length,
+			result = [],
+			rectangle,
+			bottom = top + height,
+			right = left + width;
+
+		while(rectangleIndex--){
+			rectangle = rectangles[rectangleIndex];
+			
+			// If there is intersection along the y-axis
+			if(	(top < rectangle.top ?
+					(bottom > rectangle.top) :
+					(rectangle.bottom > top)) && 
+				// And if there is intersection along the x-axis
+				(left < rectangle.left ? 
+					(right > rectangle.left) :
+					(rectangle.right > left))){
+
+				result.push(rectangle);
+			}
+		}
+
+
+		return result;
+	}
+
+	return this.top.getObjects();
+};
+
+Quadtree.prototype.prune = function(left, top, width, height){
+	var right = left + width,
+		bottom = top + height,
+		candidate,
+		rejectedObjects = [];
+		keptObjects = [];
+
+	var objects = this.top.getObjects(),
+		index = 0,
+		length = objects.length;
+
+	for(; index < length; index++){
+		candidate = objects[index];
+
+		if(	candidate.left < left || 
+			candidate.top < top || 
+			(candidate.left + candidate.width) > right ||
+			(candidate.top + candidate.height) > bottom){
+			rejectedObjects.push(candidate);
+		} else {
+			keptObjects.push(candidate);
+		}
+	}
+	if(keptObjects.length){
+		this.reset(keptObjects[0].left, keptObjects[0].top);
+		index = 0;
+		length = keptObjects.length;
+		for(; index < length; index++){
+			this.insert(keptObjects[index]);
+		}
+	} else {
+		this.reset();
+	}
+	
+	return rejectedObjects;
+};
+
+// Checks for collisions against a quadree
+Quadtree.prototype.hasObject = function(left, top, width, height){
+	var rectangles = this.top.getInteractableObjects(left, top, width, height),
+		length = rectangles.length,
+		index = 0,
+		bottom = top + height,
+		right = left + width,
+		rectangle;
+
+	for(; index < length; index++){
+		rectangle = rectangles[index];
+		
+		// If there is intersection along the y-axis
+		if((top < rectangle.top ?
+			(bottom > rectangle.top) :
+			((rectangle.top + rectangle.height) > top)) && 
+				// And if there is intersection along the x-axis
+				(left < rectangle.left ?
+					(right > rectangle.left) :
+					((rectangle.left + rectangle.width) > left))){
+			
+			// Then we have a collision
+			return rectangle;
+		}
+	}
+	
+	return false;
+};
+
+;return module.exports;}({},{});return __m0;}());
+;return module.exports;}({},{});
+var __m0 = function(module,exports){module.exports=exports;
+var Q = __m7;
+var createQuadtree = __m1.create,
+	Surface = __m2;
 	//Surface = __m8;
 
-var BoundingBox = __m2,
-	Tag = __m3;
+var BoundingBox = __m3,
+	Tag = __m4;
 
 var Collage = module.exports = function(container){
 	Surface.call(this, container);
@@ -4839,11 +4868,11 @@ Collage.getApi = function(collage){
 	return api;
 };
 
-Collage.loader = __m4;
-Collage.element = __m5;
+Collage.loader = __m5;
+Collage.element = __m6;
 
 // How many random spot will be checked to place elements per frame
-Collage.prototype.scanTryLimit = 200;
+Collage.prototype.scanTryLimit = 20;
 
 // Max number of frames an element has to find a place before another is picked
 // this prevents large gaps due to large elements
@@ -4988,16 +5017,16 @@ Collage.prototype.getRandomActiveTag = function(){
 };
 
 Collage.prototype.getRandomActiveTagFailSafe = 20;
-Collage.prototype.getRandomElementFailSafe = 1;
-Collage.prototype.getRandomElementTryLimit = 1;
+Collage.prototype.getRandomElementFailSafe = 20;
+Collage.prototype.getRandomElementTryLimit = 20;
 
 Collage.prototype.getRandomElement = function(){
 	var failSafe = this.getRandomElementFailSafe,
 		inCanvasRange = true,
-		left = this.canvasLeft - this.canvasWidth,
-		top = this.canvasTop - this.canvasHeight,
-		right = this.canvasRight + this.canvasWidth,
-		bottom = this.canvasBottom + this.canvasHeight,
+		left = this.viewportLeft - this.viewportWidth,
+		top = this.viewportTop - this.viewportHeight,
+		right = this.viewportRight + this.viewportWidth,
+		bottom = this.viewportBottom + this.viewportHeight,
 		element,
 		tag,
 		tryLimit;
@@ -5020,11 +5049,11 @@ Collage.prototype.transformStep = function(){
 	Surface.prototype.transformStep.call(this);
 	this.updateCanvasDimensions();
 	this.updateElementVisibility();
+	this.maxCheckHeight = 0;
+	this.maxCheckWidth = 0;
 
 	this.pickNextElement();
-	if(this.nextElement){
-		this.fill();
-	};
+	if(this.nextElement) this.fill();
 };
 
 Collage.prototype.start = function(){
@@ -5046,12 +5075,15 @@ Collage.prototype.pickNextElement = function(){
 	this.nextElement = this.getRandomElement();
 	this.missCount = 0;
 
-	if(this.nextElement) this.updateScanDimensions();
+	if(this.nextElement){
+		this.updateBounds();
+	}
 };
 
 Collage.prototype.insertNextElement = function(left, top, show){
-	this.showElement(this.nextElement, left, top, show);
+	var box = this.showElement(this.nextElement, left, top, show);
 	this.pickNextElement();
+	return box;
 };
 
 Collage.prototype.showElement = function(element, left, top, show){
@@ -5063,199 +5095,74 @@ Collage.prototype.showElement = function(element, left, top, show){
 	} else {
 		boundingBox.hide(this.hidingArea);
 	}
+
+	return boundingBox;
 };
 
-Collage.prototype.hideOutOfViewElements = function(visibleElements){
-	var step = this.minElementSize,
-		verticalDisplacement = Math.abs(this.lastVerticalDisplacement),
-		horizontalDisplacement = Math.abs(this.lastHorizontalDisplacement),
-		scanLeft = this.canvasLeft - horizontalDisplacement - 1,
-		scanRight = this.canvasRight + horizontalDisplacement + step,
-		scanX,
-		scanTop = this.canvasTop - verticalDisplacement - 1,
-		scanBottom = this.canvasBottom + verticalDisplacement + step,
-		scanY,
-		boundingBox;
-
-	// Hide top elements
-	scanY = scanTop;
-	for(; scanY <= this.canvasTop; scanY += step){
-		scanX = scanLeft;
-		for(; scanX <= scanRight; scanX += step){
-			boundingBox = this.quadtree.hasObject(scanX, scanY, 1, 1);
-			if(boundingBox){
-				scanX = boundingBox.right;
-
-				if(boundingBox.visible && !~visibleElements.indexOf(boundingBox)){
-					boundingBox.hide(this.hidingArea);
-				}
-			} 
-		}
-	}
-
-	// Hide bottom boundingBoxs
-	scanY = this.canvasBottom;
-	for(; scanY <= scanBottom; scanY += step){
-		scanX = scanLeft;
-		for(; scanX <= scanRight; scanX += step){
-			boundingBox = this.quadtree.hasObject(scanX, scanY, 1, 1);
-			if(boundingBox){
-				scanX = boundingBox.right;
-
-				if(boundingBox.visible && !~visibleElements.indexOf(boundingBox)){
-					boundingBox.hide(this.hidingArea);
-				}
-			} 
-		}
-	}
-
-	// Hide left boundingBoxs
-	scanX = scanLeft;
-	for(; scanX <= this.canvasLeft; scanX += step){
-		scanY = this.canvasTop;
-		for(; scanY <= this.canvasBottom; scanY += step){
-			boundingBox = this.quadtree.hasObject(scanX, scanY, 1, 1);
-			if(boundingBox){
-				scanY = boundingBox.bottom;
-
-				if(boundingBox.visible && !~visibleElements.indexOf(boundingBox)){
-					boundingBox.hide(this.hidingArea);
-				}
-			} 
-		}
-	}
-
-	// Hide right boundingBoxs
-	scanX = this.canvasRight;
-	for(; scanX <= scanRight; scanX += step){
-		scanY = this.canvasTop;
-		for(; scanY <= this.canvasBottom; scanY += step){
-			boundingBox = this.quadtree.hasObject(scanX, scanY, 1, 1);
-			if(boundingBox){
-				scanY = boundingBox.bottom;
-
-				if(boundingBox.visible && !~visibleElements.indexOf(boundingBox)){
-					boundingBox.hide(this.hidingArea);
-				}
-			} 
-		}
-	}
+Collage.prototype.getViewportBoundingBoxes = function(){
+	return this.quadtree.getObjects(this.viewportLeft, this.viewportTop, this.viewportWidth, this.viewportHeight);
 };
 
-Collage.prototype.showInViewElements = function(){
-	var step = this.minElementSize,
-		verticalDisplacement = Math.abs(this.lastVerticalDisplacement),
-		horizontalDisplacement = Math.abs(this.lastHorizontalDisplacement),
-		scanLeft = this.canvasLeft + horizontalDisplacement,
-		scanRightInner = this.canvasRight - horizontalDisplacement,
-		scanRight = this.canvasRight + step,
-		scanX,
-		scanTop = this.canvasTop + verticalDisplacement,
-		scanBottomInner = this.canvasBottom - verticalDisplacement,
-		scanBottom = this.canvasBottom + step,
-		scanY,
-		boundingBox,
-		boundingBoxes = [];
-			
-	// Show top boundingBoxes
-	scanY = this.canvasTop;
-	for(; scanY < scanTop; scanY += step){
-		scanX = this.canvasLeft;
-		for(; scanX < scanRight; scanX += step){
-			boundingBox = this.quadtree.hasObject(scanX, scanY, 1, 1);
-			if(boundingBox && !~boundingBoxes.indexOf(boundingBox)){ 
-				boundingBoxes.push(boundingBox);
-				scanX = boundingBox.right;
 
-				if(!boundingBox.visible) boundingBox.show(this.element);
-			}
-		}
-	}
+Collage.prototype.getViewportElements = function(){
+	var boundingBoxes = this.getViewportBoundingBoxes(),
+		index = boundingBoxes.length,
+		result = [];
 
-	// Show bottom boundingBoxes
-	scanY = scanBottomInner;
-	for(; scanY < scanBottom; scanY += step){
-		scanX = this.canvasLeft;
-		for(; scanX < scanRight; scanX += step){
-			boundingBox = this.quadtree.hasObject(scanX, scanY, 1, 1);
-			if(boundingBox && !~boundingBoxes.indexOf(boundingBox)){ 
-				boundingBoxes.push(boundingBox);
-				scanX = boundingBox.right;
+	// boundingBoxes.map would be proper but is less proc efficient
+	while(index--) result.push(boundingBoxes[index].element);
 
-				if(!boundingBox.visible) boundingBox.show(this.element);
-			}
-		}
-	}
-
-	// Show left boundingBoxes
-	scanX = this.canvasLeft;
-	for(; scanX < scanLeft; scanX += step){
-		scanY = scanTop;
-		for(; scanY < scanBottomInner; scanY += step){
-			boundingBox = this.quadtree.hasObject(scanX, scanY, 1, 1);
-			if(boundingBox && !~boundingBoxes.indexOf(boundingBox)){ 
-				boundingBoxes.push(boundingBox);
-				scanY = boundingBox.bottom;
-
-				if(!boundingBox.visible) boundingBox.show(this.element);
-			}
-		}
-	}
-
-	// Show right boundingBoxes
-	scanX = scanRightInner;
-	for(; scanX < scanRight; scanX += step){
-		scanY = scanTop;
-		for(; scanY < scanBottomInner; scanY += step){
-			boundingBox = this.quadtree.hasObject(scanX, scanY, 1, 1);
-			if(boundingBox && !~boundingBoxes.indexOf(boundingBox)){ 
-				boundingBoxes.push(boundingBox);
-				scanY = boundingBox.bottom;
-
-				if(!boundingBox.visible) boundingBox.show(this.element);
-			}
-		}
-	}
-
-	return boundingBoxes;
+	return result;
 };
 
 Collage.prototype.updateElementVisibility = function(){
-	var visibleElements = this.showInViewElements();
-	this.hideOutOfViewElements(visibleElements);
-};
+	var oldBoxes = this.visibleBoxes || [],
+		newBoxes = this.quadtree.getObjects(this.viewportLeft, this.viewportTop, this.viewportWidth, this.viewportHeight),
+		index,
+		box;
 
+	// Mark old visible to hide
+	index = oldBoxes.length;
+	while(index--) oldBoxes[index].hidePending = true;
 
-Collage.prototype.updateScanDimensions = function(){
-	this.checkWidth = this.nextElement.width + this.elementMargin * 2;
-	this.scanLeft = this.canvasLeft - this.checkWidth;
-	this.scanWidth = this.canvasWidth + this.checkWidth * 2;
-	this.scanRangeX = this.shiftX;
-	this.scanRight = this.scanLeft + this.scanWidth;
+	index = newBoxes.length;
+	while(index--){
+		box = newBoxes[index];
+		if(!box.visible) box.show(this.element);
 
-	this.checkHeight = this.nextElement.height + this.elementMargin * 2;
-	this.scanTop = this.canvasTop - this.checkWidth;
-	this.scanHeight = this.canvasHeight + this.checkWidth * 2;
-	this.scanRangeY = this.shiftY;
-	this.scanBottom = this.scanTop + this.scanHeight;
+		// Clear hide flags for things that are still visible
+		box.hidePending = false;
+	}
+
+	// Hide elements no longer in view
+	index = oldBoxes.length;
+	while(index--){
+		box = oldBoxes[index];
+		if(box.hidePending) box.hide(this.hidingArea);
+	}
+
+	this.visibleBoxes = newBoxes;
 };
 
 Collage.prototype.updateCanvasDimensions = function(){
-	this.shiftY = Math.abs(this.verticalPosition - (this.lastOffsetY || this.verticalPosition));
-	this.shiftX = Math.abs(this.horizontalPosition - (this.lastOffsetX || this.horizontalPosition));
-	this.canvasLeft = -1 * this.horizontalPosition - this.overScan,
-	this.canvasTop = -1 * this.verticalPosition - this.overScan,
-	this.canvasWidth = this.width + this.overScan * 2,
-	this.canvasHeight = this.height + this.overScan * 2;
-	this.canvasRight = this.canvasLeft + this.canvasWidth;
-	this.canvasBottom = this.canvasTop + this.canvasHeight;
+	this.shiftY = Math.abs(this.lastVerticalDisplacement);
+	this.shiftX = Math.abs(this.lastHorizontalDisplacement);
+	this.viewportLeft = -1 * this.horizontalPosition - this.overScan,
+	this.viewportTop = -1 * this.verticalPosition - this.overScan,
+	this.viewportWidth = this.width + this.overScan * 2,
+	this.viewportHeight = this.height + this.overScan * 2;
+	this.viewportRight = this.viewportLeft + this.viewportWidth;
+	this.viewportBottom = this.viewportTop + this.viewportHeight;
+	
+	this.lastHorizontalPosition = this.horizontalPosition;
+	this.lastVerticalPosition = this.verticalPosition;
 
-	this.lastOffsetX = this.horizontalPosition;
-	this.lastOffsetY = this.verticalPosition;
+	this.movingUp = this.lastVerticalDisplacement > 0;
+	this.movingLeft = this.lastHorizontalDisplacement > 0;
 };
 
 Collage.prototype.fillCenter = function(){
-	this.updateScanDimensions();
+	/*
 
 	var	checkX,
 		checkY,
@@ -5284,18 +5191,68 @@ Collage.prototype.fillCenter = function(){
 		}
 	}
 
-	this.updateElementVisibility();
+	this.updateElementVisibility();*/
+};
+
+Collage.prototype.updateBounds = function(){
+	this.checkHeight = this.nextElement.height + this.elementMargin * 2,
+	this.checkWidth = this.nextElement.width + this.elementMargin * 2;
+
+	this.checkLeft = this.movingLeft ? (this.viewportLeft - this.checkWidth) : this.viewportRight;
+	this.checkTop = this.movingUp ? this.viewportTop - this.checkHeight : this.viewportBottom;
+	this.checkRight = this.checkLeft + this.checkWidth;
+	this.checkBottom = this.checkTop + this.checkHeight;
+		
+	this.scanLeft = this.viewportLeft - this.checkWidth;
+	this.scanTop = this.viewportTop - this.checkHeight;
+	this.scanWidth = this.viewportWidth + this.checkWidth;
+	this.scanHeight = this.viewportHeight + this.checkHeight;
+
+	this.horizontalBoxes = this.quadtree.getObjects(
+		(this.movingLeft ?  this.viewportLeft - this.checkWidth : this.viewportRight),
+		this.scanTop,
+		this.checkWidth,
+		this.scanHeight + this.checkHeight
+	);
+
+	this.verticalBoxes = this.quadtree.getObjects(
+		this.scanLeft,
+		(this.movingUp ? (this.viewportTop - this.checkHeight) : this.viewportBottom),
+		this.scanWidth + this.checkWidth,
+		this.checkHeight
+	);
+};
+
+function hasCollision(boxList, left, top, right, bottom){
+	var index = boxList.length,
+		box;
+
+	while(index--){
+		box = boxList[index];
+
+		// If there is a y-axis intersection
+		if ((top <= box.top ?
+						(bottom >= box.top) :
+						(box.bottom >= top)) && 
+							// And if there is intersection along the x-axis
+							(left <= box.left ?
+								(right >= box.left) :
+								(box.right >= left))){
+			return true;
+		}
+	}
+
+	return false;
 };
 
 Collage.prototype.fill = function(){
-	this.updateScanDimensions();
-
 	var tryCount = 0,
 		tryLimit = this.scanTryLimit,
-		existingObject,
-		checkX,
-		checkY;
-	
+		scanCheckLeft,
+		scanCheckTop,
+		scanCheckRight,
+		scanCheckBottom;
+
 	this.missCount++;
 	if(this.missCount > this.missLimit){
 		this.pickNextElement();
@@ -5303,37 +5260,23 @@ Collage.prototype.fill = function(){
 	}
 
 	for(;tryCount < tryLimit; tryCount++){
-		// FILL VERTICAL DIRECTIONS	
-		if(this.verticalPosition < this.lastOffsetY){
-			// Fill bottom
-			checkX = (this.scanLeft + this.scanWidth * Math.random())|0;
-			checkY = (this.canvasBottom + this.scanRangeY * Math.random())|0;
-		} else {
-			// Fill top
-			checkX = (this.scanLeft + this.scanWidth * Math.random() - this.checkWidth)|0;
-			checkY = (this.canvasTop - this.scanRangeY * Math.random() - this.checkHeight)|0;
-		}
-
-		existingObject = this.quadtree.hasObject(checkX - this.elementMargin, checkY - this.elementMargin, this.checkWidth, this.checkHeight);
-		if(!existingObject){
-			this.insertNextElement(checkX, checkY);
+		// VERTICAL
+		scanCheckLeft = this.scanLeft + Math.floor(this.scanWidth * Math.random());
+		scanCheckRight = scanCheckLeft + this.checkWidth;
+		
+		if(!hasCollision(this.verticalBoxes, scanCheckLeft, this.checkTop, scanCheckRight, this.checkBottom)){
+			this.insertNextElement(scanCheckLeft + this.elementMargin, this.checkTop + this.elementMargin);
 			if(!this.nextElement) break;
 		}
-		
-		// FILL HORIZONTAL DIRECTIONS
-		if(this.horizontalPosition < this.lastOffsetX){
-			// Fill right
-			checkX = (this.canvasRight + this.scanRangeX * Math.random())|0;
-			checkY = (this.scanTop + this.scanHeight * Math.random())|0;
-		} else {
-			// Fill left
-			checkX = (this.canvasLeft - this.scanRangeX * Math.random() - this.checkWidth)|0;
-			checkY = (this.scanTop + this.scanHeight * Math.random() - this.checkHeight)|0;
-		}
 
-		existingObject = this.quadtree.hasObject(checkX - this.elementMargin, checkY - this.elementMargin, this.checkWidth, this.checkHeight);
-		if(!existingObject){
-			this.insertNextElement(checkX, checkY);
+		// HORIZONTAL
+		scanCheckTop = this.scanTop + Math.floor(this.scanHeight * Math.random());
+		scanCheckBottom = scanCheckTop + this.checkHeight;
+
+		if(!hasCollision(this.horizontalBoxes, this.checkLeft, scanCheckTop, this.checkRight, scanCheckBottom)){
+			box = this.insertNextElement(this.checkLeft + this.elementMargin, scanCheckTop + this.elementMargin);
+			this.horizontalBoxes.push(box);
+
 			if(!this.nextElement) break;
 		}
 	}

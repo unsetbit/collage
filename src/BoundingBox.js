@@ -11,11 +11,15 @@ var BoundingBox = module.exports = function(element, left, top){
 }
 
 BoundingBox.prototype.show = function(container){
+	if(this.visible) return;
+	
 	this.visible = true;
 	this.element.show(this.left, this.top, container);
 };
 
 BoundingBox.prototype.hide = function(container){
+	if(!this.visible) return;
+
 	this.visible = false;
 	this.element.hide(container);
 };

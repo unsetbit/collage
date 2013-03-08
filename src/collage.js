@@ -1,5 +1,5 @@
 var Q = require('q/q.js');
-var createQuadtree = require('giant-quadtree/dist/quadtree-module.js').create,
+var createQuadtree = require('../../giant-quadtree/dist/quadtree-module.js').create,
 	Surface = require('../../big-surface/dist/surface-module.js');
 	//Surface = require('big-surface/dist/surface-module.js');
 
@@ -47,7 +47,7 @@ Collage.loader = require('./loader/index.js');
 Collage.element = require('./element/index.js');
 
 // How many random spot will be checked to place elements per frame
-Collage.prototype.scanTryLimit = 200;
+Collage.prototype.scanTryLimit = 20;
 
 // Max number of frames an element has to find a place before another is picked
 // this prevents large gaps due to large elements
@@ -192,16 +192,16 @@ Collage.prototype.getRandomActiveTag = function(){
 };
 
 Collage.prototype.getRandomActiveTagFailSafe = 20;
-Collage.prototype.getRandomElementFailSafe = 1;
-Collage.prototype.getRandomElementTryLimit = 1;
+Collage.prototype.getRandomElementFailSafe = 20;
+Collage.prototype.getRandomElementTryLimit = 20;
 
 Collage.prototype.getRandomElement = function(){
 	var failSafe = this.getRandomElementFailSafe,
 		inCanvasRange = true,
-		left = this.canvasLeft - this.canvasWidth,
-		top = this.canvasTop - this.canvasHeight,
-		right = this.canvasRight + this.canvasWidth,
-		bottom = this.canvasBottom + this.canvasHeight,
+		left = this.viewportLeft - this.viewportWidth,
+		top = this.viewportTop - this.viewportHeight,
+		right = this.viewportRight + this.viewportWidth,
+		bottom = this.viewportBottom + this.viewportHeight,
 		element,
 		tag,
 		tryLimit;
@@ -224,11 +224,11 @@ Collage.prototype.transformStep = function(){
 	Surface.prototype.transformStep.call(this);
 	this.updateCanvasDimensions();
 	this.updateElementVisibility();
+	this.maxCheckHeight = 0;
+	this.maxCheckWidth = 0;
 
 	this.pickNextElement();
-	if(this.nextElement){
-		this.fill();
-	};
+	if(this.nextElement) this.fill();
 };
 
 Collage.prototype.start = function(){
@@ -250,12 +250,15 @@ Collage.prototype.pickNextElement = function(){
 	this.nextElement = this.getRandomElement();
 	this.missCount = 0;
 
-	if(this.nextElement) this.updateScanDimensions();
+	if(this.nextElement){
+		this.updateBounds();
+	}
 };
 
 Collage.prototype.insertNextElement = function(left, top, show){
-	this.showElement(this.nextElement, left, top, show);
+	var box = this.showElement(this.nextElement, left, top, show);
 	this.pickNextElement();
+	return box;
 };
 
 Collage.prototype.showElement = function(element, left, top, show){
@@ -267,199 +270,74 @@ Collage.prototype.showElement = function(element, left, top, show){
 	} else {
 		boundingBox.hide(this.hidingArea);
 	}
+
+	return boundingBox;
 };
 
-Collage.prototype.hideOutOfViewElements = function(visibleElements){
-	var step = this.minElementSize,
-		verticalDisplacement = Math.abs(this.lastVerticalDisplacement),
-		horizontalDisplacement = Math.abs(this.lastHorizontalDisplacement),
-		scanLeft = this.canvasLeft - horizontalDisplacement - 1,
-		scanRight = this.canvasRight + horizontalDisplacement + step,
-		scanX,
-		scanTop = this.canvasTop - verticalDisplacement - 1,
-		scanBottom = this.canvasBottom + verticalDisplacement + step,
-		scanY,
-		boundingBox;
-
-	// Hide top elements
-	scanY = scanTop;
-	for(; scanY <= this.canvasTop; scanY += step){
-		scanX = scanLeft;
-		for(; scanX <= scanRight; scanX += step){
-			boundingBox = this.quadtree.hasObject(scanX, scanY, 1, 1);
-			if(boundingBox){
-				scanX = boundingBox.right;
-
-				if(boundingBox.visible && !~visibleElements.indexOf(boundingBox)){
-					boundingBox.hide(this.hidingArea);
-				}
-			} 
-		}
-	}
-
-	// Hide bottom boundingBoxs
-	scanY = this.canvasBottom;
-	for(; scanY <= scanBottom; scanY += step){
-		scanX = scanLeft;
-		for(; scanX <= scanRight; scanX += step){
-			boundingBox = this.quadtree.hasObject(scanX, scanY, 1, 1);
-			if(boundingBox){
-				scanX = boundingBox.right;
-
-				if(boundingBox.visible && !~visibleElements.indexOf(boundingBox)){
-					boundingBox.hide(this.hidingArea);
-				}
-			} 
-		}
-	}
-
-	// Hide left boundingBoxs
-	scanX = scanLeft;
-	for(; scanX <= this.canvasLeft; scanX += step){
-		scanY = this.canvasTop;
-		for(; scanY <= this.canvasBottom; scanY += step){
-			boundingBox = this.quadtree.hasObject(scanX, scanY, 1, 1);
-			if(boundingBox){
-				scanY = boundingBox.bottom;
-
-				if(boundingBox.visible && !~visibleElements.indexOf(boundingBox)){
-					boundingBox.hide(this.hidingArea);
-				}
-			} 
-		}
-	}
-
-	// Hide right boundingBoxs
-	scanX = this.canvasRight;
-	for(; scanX <= scanRight; scanX += step){
-		scanY = this.canvasTop;
-		for(; scanY <= this.canvasBottom; scanY += step){
-			boundingBox = this.quadtree.hasObject(scanX, scanY, 1, 1);
-			if(boundingBox){
-				scanY = boundingBox.bottom;
-
-				if(boundingBox.visible && !~visibleElements.indexOf(boundingBox)){
-					boundingBox.hide(this.hidingArea);
-				}
-			} 
-		}
-	}
+Collage.prototype.getViewportBoundingBoxes = function(){
+	return this.quadtree.getObjects(this.viewportLeft, this.viewportTop, this.viewportWidth, this.viewportHeight);
 };
 
-Collage.prototype.showInViewElements = function(){
-	var step = this.minElementSize,
-		verticalDisplacement = Math.abs(this.lastVerticalDisplacement),
-		horizontalDisplacement = Math.abs(this.lastHorizontalDisplacement),
-		scanLeft = this.canvasLeft + horizontalDisplacement,
-		scanRightInner = this.canvasRight - horizontalDisplacement,
-		scanRight = this.canvasRight + step,
-		scanX,
-		scanTop = this.canvasTop + verticalDisplacement,
-		scanBottomInner = this.canvasBottom - verticalDisplacement,
-		scanBottom = this.canvasBottom + step,
-		scanY,
-		boundingBox,
-		boundingBoxes = [];
-			
-	// Show top boundingBoxes
-	scanY = this.canvasTop;
-	for(; scanY < scanTop; scanY += step){
-		scanX = this.canvasLeft;
-		for(; scanX < scanRight; scanX += step){
-			boundingBox = this.quadtree.hasObject(scanX, scanY, 1, 1);
-			if(boundingBox && !~boundingBoxes.indexOf(boundingBox)){ 
-				boundingBoxes.push(boundingBox);
-				scanX = boundingBox.right;
 
-				if(!boundingBox.visible) boundingBox.show(this.element);
-			}
-		}
-	}
+Collage.prototype.getViewportElements = function(){
+	var boundingBoxes = this.getViewportBoundingBoxes(),
+		index = boundingBoxes.length,
+		result = [];
 
-	// Show bottom boundingBoxes
-	scanY = scanBottomInner;
-	for(; scanY < scanBottom; scanY += step){
-		scanX = this.canvasLeft;
-		for(; scanX < scanRight; scanX += step){
-			boundingBox = this.quadtree.hasObject(scanX, scanY, 1, 1);
-			if(boundingBox && !~boundingBoxes.indexOf(boundingBox)){ 
-				boundingBoxes.push(boundingBox);
-				scanX = boundingBox.right;
+	// boundingBoxes.map would be proper but is less proc efficient
+	while(index--) result.push(boundingBoxes[index].element);
 
-				if(!boundingBox.visible) boundingBox.show(this.element);
-			}
-		}
-	}
-
-	// Show left boundingBoxes
-	scanX = this.canvasLeft;
-	for(; scanX < scanLeft; scanX += step){
-		scanY = scanTop;
-		for(; scanY < scanBottomInner; scanY += step){
-			boundingBox = this.quadtree.hasObject(scanX, scanY, 1, 1);
-			if(boundingBox && !~boundingBoxes.indexOf(boundingBox)){ 
-				boundingBoxes.push(boundingBox);
-				scanY = boundingBox.bottom;
-
-				if(!boundingBox.visible) boundingBox.show(this.element);
-			}
-		}
-	}
-
-	// Show right boundingBoxes
-	scanX = scanRightInner;
-	for(; scanX < scanRight; scanX += step){
-		scanY = scanTop;
-		for(; scanY < scanBottomInner; scanY += step){
-			boundingBox = this.quadtree.hasObject(scanX, scanY, 1, 1);
-			if(boundingBox && !~boundingBoxes.indexOf(boundingBox)){ 
-				boundingBoxes.push(boundingBox);
-				scanY = boundingBox.bottom;
-
-				if(!boundingBox.visible) boundingBox.show(this.element);
-			}
-		}
-	}
-
-	return boundingBoxes;
+	return result;
 };
 
 Collage.prototype.updateElementVisibility = function(){
-	var visibleElements = this.showInViewElements();
-	this.hideOutOfViewElements(visibleElements);
-};
+	var oldBoxes = this.visibleBoxes || [],
+		newBoxes = this.quadtree.getObjects(this.viewportLeft, this.viewportTop, this.viewportWidth, this.viewportHeight),
+		index,
+		box;
 
+	// Mark old visible to hide
+	index = oldBoxes.length;
+	while(index--) oldBoxes[index].hidePending = true;
 
-Collage.prototype.updateScanDimensions = function(){
-	this.checkWidth = this.nextElement.width + this.elementMargin * 2;
-	this.scanLeft = this.canvasLeft - this.checkWidth;
-	this.scanWidth = this.canvasWidth + this.checkWidth * 2;
-	this.scanRangeX = this.shiftX;
-	this.scanRight = this.scanLeft + this.scanWidth;
+	index = newBoxes.length;
+	while(index--){
+		box = newBoxes[index];
+		if(!box.visible) box.show(this.element);
 
-	this.checkHeight = this.nextElement.height + this.elementMargin * 2;
-	this.scanTop = this.canvasTop - this.checkWidth;
-	this.scanHeight = this.canvasHeight + this.checkWidth * 2;
-	this.scanRangeY = this.shiftY;
-	this.scanBottom = this.scanTop + this.scanHeight;
+		// Clear hide flags for things that are still visible
+		box.hidePending = false;
+	}
+
+	// Hide elements no longer in view
+	index = oldBoxes.length;
+	while(index--){
+		box = oldBoxes[index];
+		if(box.hidePending) box.hide(this.hidingArea);
+	}
+
+	this.visibleBoxes = newBoxes;
 };
 
 Collage.prototype.updateCanvasDimensions = function(){
-	this.shiftY = Math.abs(this.verticalPosition - (this.lastOffsetY || this.verticalPosition));
-	this.shiftX = Math.abs(this.horizontalPosition - (this.lastOffsetX || this.horizontalPosition));
-	this.canvasLeft = -1 * this.horizontalPosition - this.overScan,
-	this.canvasTop = -1 * this.verticalPosition - this.overScan,
-	this.canvasWidth = this.width + this.overScan * 2,
-	this.canvasHeight = this.height + this.overScan * 2;
-	this.canvasRight = this.canvasLeft + this.canvasWidth;
-	this.canvasBottom = this.canvasTop + this.canvasHeight;
+	this.shiftY = Math.abs(this.lastVerticalDisplacement);
+	this.shiftX = Math.abs(this.lastHorizontalDisplacement);
+	this.viewportLeft = -1 * this.horizontalPosition - this.overScan,
+	this.viewportTop = -1 * this.verticalPosition - this.overScan,
+	this.viewportWidth = this.width + this.overScan * 2,
+	this.viewportHeight = this.height + this.overScan * 2;
+	this.viewportRight = this.viewportLeft + this.viewportWidth;
+	this.viewportBottom = this.viewportTop + this.viewportHeight;
+	
+	this.lastHorizontalPosition = this.horizontalPosition;
+	this.lastVerticalPosition = this.verticalPosition;
 
-	this.lastOffsetX = this.horizontalPosition;
-	this.lastOffsetY = this.verticalPosition;
+	this.movingUp = this.lastVerticalDisplacement > 0;
+	this.movingLeft = this.lastHorizontalDisplacement > 0;
 };
 
 Collage.prototype.fillCenter = function(){
-	this.updateScanDimensions();
+	/*
 
 	var	checkX,
 		checkY,
@@ -488,18 +366,68 @@ Collage.prototype.fillCenter = function(){
 		}
 	}
 
-	this.updateElementVisibility();
+	this.updateElementVisibility();*/
+};
+
+Collage.prototype.updateBounds = function(){
+	this.checkHeight = this.nextElement.height + this.elementMargin * 2,
+	this.checkWidth = this.nextElement.width + this.elementMargin * 2;
+
+	this.checkLeft = this.movingLeft ? (this.viewportLeft - this.checkWidth) : this.viewportRight;
+	this.checkTop = this.movingUp ? this.viewportTop - this.checkHeight : this.viewportBottom;
+	this.checkRight = this.checkLeft + this.checkWidth;
+	this.checkBottom = this.checkTop + this.checkHeight;
+		
+	this.scanLeft = this.viewportLeft - this.checkWidth;
+	this.scanTop = this.viewportTop - this.checkHeight;
+	this.scanWidth = this.viewportWidth + this.checkWidth;
+	this.scanHeight = this.viewportHeight + this.checkHeight;
+
+	this.horizontalBoxes = this.quadtree.getObjects(
+		(this.movingLeft ?  this.viewportLeft - this.checkWidth : this.viewportRight),
+		this.scanTop,
+		this.checkWidth,
+		this.scanHeight + this.checkHeight
+	);
+
+	this.verticalBoxes = this.quadtree.getObjects(
+		this.scanLeft,
+		(this.movingUp ? (this.viewportTop - this.checkHeight) : this.viewportBottom),
+		this.scanWidth + this.checkWidth,
+		this.checkHeight
+	);
+};
+
+function hasCollision(boxList, left, top, right, bottom){
+	var index = boxList.length,
+		box;
+
+	while(index--){
+		box = boxList[index];
+
+		// If there is a y-axis intersection
+		if ((top <= box.top ?
+						(bottom >= box.top) :
+						(box.bottom >= top)) && 
+							// And if there is intersection along the x-axis
+							(left <= box.left ?
+								(right >= box.left) :
+								(box.right >= left))){
+			return true;
+		}
+	}
+
+	return false;
 };
 
 Collage.prototype.fill = function(){
-	this.updateScanDimensions();
-
 	var tryCount = 0,
 		tryLimit = this.scanTryLimit,
-		existingObject,
-		checkX,
-		checkY;
-	
+		scanCheckLeft,
+		scanCheckTop,
+		scanCheckRight,
+		scanCheckBottom;
+
 	this.missCount++;
 	if(this.missCount > this.missLimit){
 		this.pickNextElement();
@@ -507,37 +435,23 @@ Collage.prototype.fill = function(){
 	}
 
 	for(;tryCount < tryLimit; tryCount++){
-		// FILL VERTICAL DIRECTIONS	
-		if(this.verticalPosition < this.lastOffsetY){
-			// Fill bottom
-			checkX = (this.scanLeft + this.scanWidth * Math.random())|0;
-			checkY = (this.canvasBottom + this.scanRangeY * Math.random())|0;
-		} else {
-			// Fill top
-			checkX = (this.scanLeft + this.scanWidth * Math.random() - this.checkWidth)|0;
-			checkY = (this.canvasTop - this.scanRangeY * Math.random() - this.checkHeight)|0;
-		}
-
-		existingObject = this.quadtree.hasObject(checkX - this.elementMargin, checkY - this.elementMargin, this.checkWidth, this.checkHeight);
-		if(!existingObject){
-			this.insertNextElement(checkX, checkY);
+		// VERTICAL
+		scanCheckLeft = this.scanLeft + Math.floor(this.scanWidth * Math.random());
+		scanCheckRight = scanCheckLeft + this.checkWidth;
+		
+		if(!hasCollision(this.verticalBoxes, scanCheckLeft, this.checkTop, scanCheckRight, this.checkBottom)){
+			this.insertNextElement(scanCheckLeft + this.elementMargin, this.checkTop + this.elementMargin);
 			if(!this.nextElement) break;
 		}
-		
-		// FILL HORIZONTAL DIRECTIONS
-		if(this.horizontalPosition < this.lastOffsetX){
-			// Fill right
-			checkX = (this.canvasRight + this.scanRangeX * Math.random())|0;
-			checkY = (this.scanTop + this.scanHeight * Math.random())|0;
-		} else {
-			// Fill left
-			checkX = (this.canvasLeft - this.scanRangeX * Math.random() - this.checkWidth)|0;
-			checkY = (this.scanTop + this.scanHeight * Math.random() - this.checkHeight)|0;
-		}
 
-		existingObject = this.quadtree.hasObject(checkX - this.elementMargin, checkY - this.elementMargin, this.checkWidth, this.checkHeight);
-		if(!existingObject){
-			this.insertNextElement(checkX, checkY);
+		// HORIZONTAL
+		scanCheckTop = this.scanTop + Math.floor(this.scanHeight * Math.random());
+		scanCheckBottom = scanCheckTop + this.checkHeight;
+
+		if(!hasCollision(this.horizontalBoxes, this.checkLeft, scanCheckTop, this.checkRight, scanCheckBottom)){
+			box = this.insertNextElement(this.checkLeft + this.elementMargin, scanCheckTop + this.elementMargin);
+			this.horizontalBoxes.push(box);
+
 			if(!this.nextElement) break;
 		}
 	}

@@ -320,8 +320,6 @@ Collage.prototype.updateElementVisibility = function(){
 };
 
 Collage.prototype.updateCanvasDimensions = function(){
-	this.shiftY = Math.abs(this.lastVerticalDisplacement);
-	this.shiftX = Math.abs(this.lastHorizontalDisplacement);
 	this.viewportLeft = -1 * this.horizontalPosition - this.overScan,
 	this.viewportTop = -1 * this.verticalPosition - this.overScan,
 	this.viewportWidth = this.width + this.overScan * 2,
@@ -329,28 +327,30 @@ Collage.prototype.updateCanvasDimensions = function(){
 	this.viewportRight = this.viewportLeft + this.viewportWidth;
 	this.viewportBottom = this.viewportTop + this.viewportHeight;
 	
-	this.lastHorizontalPosition = this.horizontalPosition;
-	this.lastVerticalPosition = this.verticalPosition;
-
 	this.movingUp = this.lastVerticalDisplacement > 0;
 	this.movingLeft = this.lastHorizontalDisplacement > 0;
 };
 
 Collage.prototype.fillCenter = function(){
-	/*
 
-	var	checkX,
-		checkY,
+	var boxes = this.quadtree.getObjects(
+		this.viewportLeft - this.checkWidth,
+		this.viewportTop - this.checkHeight,
+		this.viewportWidth + this.checkWidth * 2,
+		this.viewportHeight + this.checkHeight * 2
+	);
+
+	var	scanCheckLeft,
+		scanCheckTop,
+		scanCheckRight,
+		scanCheckBottom,
 
 		tryCount = 0,
-		tryLimit = this.scanTryLimit * 300,
+		tryLimit = this.scanTryLimit * 10,
 		missCount = 0,
-		missLimit = tryLimit / 200;
+		missLimit = tryLimit / 20;
 
 	for(;tryCount < tryLimit; tryCount++){
-		checkX = (this.scanLeft + this.scanWidth * Math.random())|0;
-		checkY = (this.scanTop + this.scanHeight * Math.random())|0;
-
 		missCount++;
 
 		if(missCount > missLimit){
@@ -359,14 +359,26 @@ Collage.prototype.fillCenter = function(){
 			if(!this.nextElement) break;
 		}
 
-		if(!this.quadtree.hasObject(checkX - this.elementMargin, checkY - this.elementMargin, this.checkWidth, this.checkHeight)){
-			missCount = 0;
-			this.insertNextElement(checkX, checkY, true);
+		scanCheckLeft = (this.viewportLeft - this.checkWidth) + Math.floor((this.viewportWidth + this.checkWidth) * Math.random()),
+		scanCheckTop = (this.viewportTop - this.checkHeight) + Math.floor((this.viewportHeight + this.checkHeight) * Math.random()),
+		scanCheckRight = scanCheckLeft + this.checkWidth,
+		scanCheckBottom = scanCheckTop + this.checkHeight;
+	
+		if(!hasCollision(boxes, scanCheckLeft, scanCheckTop, scanCheckRight, scanCheckBottom)){
+			this.insertNextElement(scanCheckLeft + this.elementMargin, scanCheckTop + this.elementMargin);
 			if(!this.nextElement) break;
+
+			missCount = 0;
+			boxes = this.quadtree.getObjects(
+				this.viewportLeft - this.checkWidth,
+				this.viewportTop - this.checkHeight,
+				this.viewportWidth + this.checkWidth * 2,
+				this.viewportHeight + this.checkHeight * 2
+			);
 		}
 	}
 
-	this.updateElementVisibility();*/
+	this.updateElementVisibility();
 };
 
 Collage.prototype.updateBounds = function(){

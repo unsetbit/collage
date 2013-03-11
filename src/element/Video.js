@@ -56,6 +56,7 @@ function VideoElement (element, player){
 	this.emitter = new EventEmitter();
 	this.lastReportedTime = 0;
 	player.addEventListener("onStateChange", this.statusChangeHandler.bind(this));
+	player.addEventListener("onError", this.errorHandler.bind(this));
 	this.hide();
 };
 VideoElement.prototype = Object.create(Element.prototype);
@@ -64,6 +65,8 @@ VideoElement.create = function(element, player, options){
 	var videoElement = new VideoElement(element, player);
 
 	if(options.continuousPlay) videoElement.continuousPlay = true;
+	if(options.autoPlay) videoElement.autoPlay = true;
+	if(options.loop) videoElement.loop = true;
 	
 	return VideoElement.getApi(videoElement);
 };
@@ -74,10 +77,28 @@ VideoElement.getApi = function(element){
 	api.element = element.element;
 	api.on = element.emitter.on.bind(element.emitter);
 	api.removeListener = element.emitter.removeListener.bind(element.emitter);
+	api.destroy = element.destroy.bind(element);
 	return api;
 };
 
 VideoElement.prototype.continuousPlay = false;
+VideoElement.prototype.autoPlay = false;
+VideoElement.prototype.loop = false;
+
+VideoElement.prototype.errorHandler = function(e){
+	if(e.data === 150){
+		console.log(this);
+		this.destroy();
+	}
+};
+
+VideoElement.prototype.destroy = function(){
+	this.height = 0;
+	this.width = 0;
+	this.bottom = this.top;
+	this.left = this.right;
+	this.element.parentNode.removeChild(this.element);
+};
 
 VideoElement.prototype.hide = function(){
 	Element.prototype.hide.call(this);
@@ -91,7 +112,7 @@ VideoElement.prototype.hide = function(){
 VideoElement.prototype.show = function(left, top){
 	this.element.style.opacity = 1;
 	Element.prototype.show.call(this, left, top);
-	this.player.playVideo();		
+	if(this.autoPlay) this.player.playVideo();
 };
 
 VideoElement.prototype.statusChangeHandler = function(status){

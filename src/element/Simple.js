@@ -1,19 +1,34 @@
 var Element = require("./Element.js");
 
-module.exports = StaticElement;
+module.exports = SimpleElement;
 
-function StaticElement (element){
+function SimpleElement (element){
 	Element.call(this, element, parseInt(element.width), parseInt(element.height));
+	this.appended;
 };
-StaticElement.prototype = Object.create(Element.prototype);
+SimpleElement.prototype = Object.create(Element.prototype);
+
+SimpleElement.create = function(element){
+	element = new SimpleElement(element);
+	return SimpleElement.getApi(element);
+}
+
+SimpleElement.getApi = function(element){
+	return Element.getApi(element);
+};
 
 var hidingArea = document.createDocumentFragment();
-StaticElement.prototype.hide = function(){	
+SimpleElement.prototype.hide = function(){	
 	Element.prototype.hide.call(this);
-	hidingArea.appendChild(this.element);
+	this.element.style.display = "none";
+	//hidingArea.appendChild(this.element);
 };
 
-StaticElement.prototype.show = function(left, top, container){
+SimpleElement.prototype.show = function(left, top, container){
 	Element.prototype.show.call(this, left, top);
-	container.appendChild(this.element);
+	this.element.style.display = "block";
+	if(!this.appended){
+		container.appendChild(this.element);
+		this.appended = true;
+	}
 };

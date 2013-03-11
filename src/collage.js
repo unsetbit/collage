@@ -194,14 +194,16 @@ Collage.prototype.getRandomActiveTag = function(){
 Collage.prototype.getRandomActiveTagFailSafe = 20;
 Collage.prototype.getRandomElementFailSafe = 20;
 Collage.prototype.getRandomElementTryLimit = 20;
+Collage.prototype.maxElementWidth = 2000;
+Collage.prototype.maxElementHeight = 1000;
 
 Collage.prototype.getRandomElement = function(){
 	var failSafe = this.getRandomElementFailSafe,
 		inCanvasRange = true,
-		left = this.viewportLeft - this.viewportWidth,
-		top = this.viewportTop - this.viewportHeight,
-		right = this.viewportRight + this.viewportWidth,
-		bottom = this.viewportBottom + this.viewportHeight,
+		left = this.viewportLeft - this.maxElementWidth,
+		top = this.viewportTop - this.maxElementHeight,
+		right = this.viewportRight + this.maxElementWidth,
+		bottom = this.viewportBottom + this.maxElementHeight,
 		element,
 		tag,
 		tryLimit;

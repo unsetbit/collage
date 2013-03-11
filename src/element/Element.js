@@ -5,6 +5,7 @@ function Element(domElement, width, height){
 	this.width = width || domElement.width || parseInt(domElement.clientWidth);
 	this.height = height || domElement.height || parseInt(domElement.clientHeight);
 	this.locations = [];
+	this.isVisible;
 };
 
 Element.create = function(domElement, width, height){
@@ -22,6 +23,10 @@ Element.getApi = function(element){
 
 	Object.defineProperty(api, "width", {
 		get: function(){return element.width;}
+	});
+
+	Object.defineProperty(api, "visible", {
+		get: function(){return element.isVisible;}
 	});
 
 	Object.defineProperty(api, "height", {
@@ -63,8 +68,11 @@ Element.prototype.reposition = function(left, top){
 	this.element.style.top = top + "px";
 };
 
-Element.prototype.hide = function(){};
+Element.prototype.hide = function(){
+	this.isVisible = false;
+};
 
 Element.prototype.show = function(left, top){
 	this.reposition(left, top);
+	this.isVisible = true;
 };

@@ -2,126 +2,150 @@ require('eventEmitter/EventEmitter.js');
 
 var Q = require('q/q.js');
 var VideoElement = require('../element/Video.js');
+var getFromApi = require('./getFromCommonApi.js');
+var TIMEOUT = 10 * 1000;
 
 module.exports = function(options){
-	// Handle single video ids case
-	if(options.videoId) return loadVideo(options);
+	if(options.query){
+		return queryVideos(options.query).then(function(videoIds){
+			options.videoIds = videoIds;
+			return loadVideos(options);
+		})
+	}
 
-	if(options.videoIds){
-		var videoIdIndex = options.videoIds.length,
-			promises = [];
+	if(options.videoId){
+		options.videoIds = [options.videoId];
 
-		while(videoIdIndex--){
-			options.videoId = options.videoIds[videoIdIndex];
-			promises.push(loadVideo(options));
-		}
+		return loadVideos(options).then(function(elements){
+			return elements[0];
+		});
+	} else if(options.videoIds){
+		return loadVideos(options);	
+	}
+};
+
+var queryVideos = (function(){
+	var endpoint = "https://www.googleapis.com/youtube/v3/search";
+
+	return function(query){
+		var params = [
+				"part=id",
+				"videoDuration=short",
+				"type=video",
+				"videoEmbeddable=true",
+				"videoSyndicated=true",
+				"key=AIzaSyAZw0kviWeCOidthcZAYs5oCZ0k8DsOuUk",
+				"query=" + encodeURIComponent(query)
+			];
 		
-		return Q.all(promises);
-	}
-};
+		return getFromApi(endpoint, params).then(function(response){
+			var videoIds = [];
+			
+			response.items.forEach(function(item){
+				videoIds.push(item.id.videoId);
+			});
 
-var playerIdCounter = 0;
-function loadVideo(options){
-	var deferred = Q.defer(),
-		videoId = options.videoId,
-		width = options.width || 1060,
-		height = options.height || 650;
+			return videoIds;
+		});
+	};
+}());
 
-	var playerId = "player" + (playerIdCounter++);
+var loadVideos = (function(){
+	return function(options){
+		if(!Array.isArray(options.videoIds) || !options.container) return;
+		
+		var index = options.videoIds.length,
+			deferred = Q.defer(),
+			elements = [],
+			videoOptions,
+			timedOut = false,
+			timeout = setTimeout(function(){
+				timedOut = true;
+				deferred.resolve(elements);
+			}, TIMEOUT);
 
-	var element = document.createElement("div");
-	element.width = width;
-	element.height = height;
-	element.className = "youtube-video";
-	element.innerHTML = '<div id="' + playerId + '"></div><div class="video-mask"></div>';
-	options.container.appendChild(element);
-	
-	new YT.Player(playerId, {
-		height: height,
-		width: width,
-		playerVars: { 'controls': 0, 'html5': 1 },
-		videoId: videoId,
-		events: {
-			onReady: function(e){
-				var playerObj = e.target,
-					videoElement = VideoElement.create(element, playerObj, {
-						continuousPlay: options.continuousPlay
-					});
-				
-				if(options.loop) videoElement.loop = true;
-				
-				if(options.continuousPlay){
-					playerObj.unMute();
-					playerObj.setVolume(100);
-				}
+		options.callback = function(element){
+			if(timedOut || !element) return;
+			elements.push(element);
 
-				if(options.mute){
-					playerObj.mute();
-					playerObj.setVolume(0);
-				}
-
-				deferred.resolve(videoElement);
-				
-				if(options.callback) options.callback(videoElement);
-			},
-			onError: function(e){
-				deferred.reject(e);
+			if(elements.length === options.videoIds.length){
+				clearTimeout(timeout);
+				deferred.resolve(elements);
 			}
 		}
-	});
 
-	return deferred.promise;
-};
+		while(index--){
+			videoOptions = Object.create(options);
+			videoOptions.videoId = options.videoIds[index];
+			loadVideo(videoOptions);
+		}
 
-function getApi(player){
-	var api = {};
-	api.player = player.player;
-	api.element = player.element;
-	api.on = player.emitter.on.bind(player.emitter);
-	api.removeListener = player.emitter.removeListener.bind(player.emitter);
-	api.kill = player.kill.bind(player);
-	return api;
-}
+		return deferred.promise;
+	};
+}());
 
-function Player(player, element){
-	this.id = player.id;
-	this.player = player;
-	this.element = element;
-	this.lastReportedTime = 0;
-	this.emitter = new EventEmitter();
+var isiOS = (navigator.userAgent.match(/(iPad|iPhone|iPod)/g) ? true : false );
 
-	player.addEventListener("onStateChange", this.onStatusChange.bind(this));
-}
+var loadVideo = (function(){
+	var playerIdCounter = 0;
+	return function(options){
+		var videoId = options.videoId,
+			width = options.width || 1060,
+			height = options.height || 650;
 
-Player.prototype.kill = function(){
-	this.container.parentNode.removeChild(this.container);
-	this.emitter.emit('dead');
-};
+		var playerId = "player" + (playerIdCounter++);
 
-Player.prototype.onStatusChange = function(status){
-	switch(status.data){
-		case -1:
-			this.emitter.emit('unstarted');
-		break;
-		case 0:
-			this.emitter.emit('ended');
-			
-			if(this.loop){
-				this.player.seekTo(0);
-				this.player.playVideo();
+		var element = document.createElement("div");
+		element.width = width;
+		element.height = height;
+		element.className = "youtube-video";
+		
+		if(isiOS) element.className += " hide-video-mask";
+
+		element.innerHTML = '<div id="' + playerId + '"></div><div class="video-mask"></div>';
+		options.container.appendChild(element);
+		
+		var videoElement;
+
+		new YT.Player(playerId, {
+			height: height,
+			width: width,
+			playerVars: { 'controls': 0, 'html5': 1 },
+			videoId: videoId,
+			events: {
+				onReady: function(e){
+					var playerObj = e.target;
+
+					videoElement = VideoElement.create(element, playerObj, {
+						continuousPlay: options.continuousPlay,
+						autoPlay: options.autoPlay,
+						loop: options.loop
+					});
+					
+					if(isiOS){
+						videoElement.on("playing", function(){
+							element.className = element.className.replace(' hide-video-mask', '');
+						});
+
+						videoElement.on("paused", function(){
+							element.className += ' hide-video-mask';
+						});
+					}
+
+					playerObj.pauseVideo();
+					if(options.continuousPlay){
+						playerObj.unMute();
+						playerObj.setVolume(100);
+					}
+
+					if(options.mute){
+						playerObj.mute();
+						playerObj.setVolume(0);
+					}
+					
+					if(options.callback) options.callback(videoElement);
+				}
 			}
-		break;
-		case 1:
-			this.emitter.emit('playing');
-		break;
-		case 2:
-			this.emitter.emit('paused');
-		break;
-		case 3:
-			this.emitter.emit('buffering');
-		break;
-		case 5:
-			this.emitter.emit('video cued');
-		break;
-	}
-};
+		});
+	};
+}());

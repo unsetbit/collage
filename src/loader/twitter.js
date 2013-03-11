@@ -1,122 +1,151 @@
+// This uses an undocumented twitter api (twttr.widget.createTweet) so it might break
+
 var Q = require('q/q.js'),
-	StaticElement = require("../element/Static.js"),
-	mustache = require("mustache/mustache.js");
+	getFromApi = require('./getFromCommonApi.js'),	
+	IframeElement = require('../element/Iframe.js');
 
-module.exports = function(query){
+var TIMEOUT = 1000 * 10;
 
+// options should have container and query
+module.exports = function(options){
+	var container = options.container;
+
+	if(options.query){
+		return queryTweets(options.query).then(function(tweetIds){
+			return loadTweets(tweetIds, container);
+		});	
+	} else if(options.ids) {
+		return loadTweets(options.ids, container);
+	} else if(options.id){
+		return loadTweets([options.id], container).then(function(elements){
+			if(elements && elements.length) return elements[0];
+		});
+	}
 };
 
+var loadTweets = (function(){
+	return function(ids, container){
+		if(!Array.isArray(ids) || !container) return;
+		
+		var index = ids.length,
+			deferred = Q.defer(),
+			elements = [],
+			timedOut = false,
+			waitingForResize = [];
+			timeout = setTimeout(function(){
+				timedOut = true;
+				clearInterval(heightChecker);
+				deferred.resolve(elements);
+			}, TIMEOUT);
 
+		function heightCheck(){
+			var index = waitingForResize.length,
+				element;
 
-var Collection = require("./Collection.js"),
-	IframeElement = require('./element/Iframe.js');
+			while(index--){
+				element = waitingForResize[index];
+				if(element.height !== "0"  && element.width !== "0"){
+					elements.push(IframeElement.create(element));
 
-var TweetCollection = module.exports = function(){
-	Collection.apply(this, arguments);
-	this.container = this.collage.element;
-	this.tweetArea = document.createElement("div");
-	this.tweetArea.className = "tweet-area";
-	this.container.appendChild(this.tweetArea);
-	this.loading = [];
+					if(elements.length === ids.length){
+						clearTimeout(timeout);
+						clearInterval(heightChecker);
+						deferred.resolve(elements);
+					}
 
-	var self = this;
-	this.emitter.on("ready", function(){
-		clearInterval(self.checkLoadedInterval);
-		self.checkLoadedInterval = void 0;
-	});
-}
-TweetCollection.prototype = Object.create(Collection.prototype);
-
-TweetCollection.create = function(container, options){
-	options = options || {};
-	
-	var collection = new TweetCollection(container);
-
-	if(options.tryLimit) collection.tryLimit = options.tryLimit;
-	if(options.priority !== void 0) collection.priority = options.priority;
-	if(options.skipProbability !== void 0) collection.skipProbability = options.skipProbability;
-	if(!options.disabled) collection.enable();
-
-	return TweetCollection.getApi(collection);
-};
-
-TweetCollection.getApi = function(collection){
-	var api = Collection.getApi(collection);
-
-	api.add = collection.add.bind(collection);
-	api.addByQuery = collection.addByQuery.bind(collection);
-
-	return api;
-};
-
-TweetCollection.prototype.checkLoadStatus = function(){
-	var url, iframe;
-	
-	for(url in this.loading){
-		if(this.loading.hasOwnProperty(url)){
-			iframe = this.loading[url].iframe;
-			if(iframe  && iframe.clientHeight !== 0 && iframe.contentDocument && iframe.contentDocument.body.innerHTML !== ""){
-				this.loading[url].onload();
-				delete this.loading[url];
+					waitingForResize.splice(index, 1);
+				}
 			}
 		}
-	}
-};
-var SEARCH_ENDPOINT = "http://search.twitter.com/search.json?format=json";
-var callbackCounter = 0;
-var callbacks = {};
-window.TWITTER_CALLBACKS = callbacks;
-TweetCollection.prototype.addByQuery = function(query){
-	var self = this,
-		script = document.createElement("script"),
-		callbackId = "cb" + callbackCounter++,
-		src = SEARCH_ENDPOINT + "&callback=TWITTER_CALLBACKS." + callbackId + "&q=" + query; 
-	
-	script.async = true;
-	script.src = src;
-	this.setLoading();
-	callbacks[callbackId] = function(data){
-		delete callbacks[callbackId];
-		data.results.forEach(function(item){
-			self.add("https://twitter.com/" + item.from_user + "/status/" + item.id_str);
-		});
-		self.clearLoading();
-	}
-	
-	document.body.appendChild(script);
-};
 
-TweetCollection.prototype.add = function(url){
-	var self = this,
-		element = document.createElement("blockquote"),
-		anchor = document.createElement("a");
-	
-	element.className = "twitter-tweet";
-	
-	anchor.href = url;
-	element.appendChild(anchor);
+		var heightChecker = setInterval(heightCheck, 250);
 
-	this.tweetArea.appendChild(element);
-	twttr.widgets.load(this.tweetArea);
-	
-	var iframes = this.tweetArea.getElementsByTagName("iframe");
-	element = iframes[iframes.length - 1];
-	
-	this.markResource(url);
+		while(index--){
+			twttr.widgets.createTweet(ids[index], container, function(element){
+				if(timedOut) return;
 
-	this.setLoading();
+				var iframeWindow =  'contentWindow' in element? element.contentWindow : element.contentDocument.defaultView;
+				
+				var onResizeCallback = iframeWindow.onresize,
+					onMouseMoveCallback = iframeWindow.onmousemove;
+				
+				// Iframes capture all events, this allows us to bubble the event
+				// up to this window's scope
+				iframeWindow.onmousemove = function(e){
+					onMouseMoveCallback && onMouseMoveCallback(e);
+					var evt = document.createEvent("MouseEvents"),
+						boundingClientRect = element.getBoundingClientRect();
 
-	this.loading[url] = {
-		iframe: element,
-		onload: function(){
-			this.addElement(new IframeElement(element));
-			self.clearLoading();
+					evt.initMouseEvent(	"mousemove", 
+										true, 
+										false, 
+										window,
+										e.detail,
+										e.screenX,
+										e.screenY, 
+										e.clientX + boundingClientRect.left, 
+										e.clientY + boundingClientRect.top, 
+										e.ctrlKey, 
+										e.altKey,
+										e.shiftKey, 
+										e.metaKey,
+										e.button, 
+										null);
+					
+					element.dispatchEvent(evt);
+				};
+
+				waitingForResize.push(element);
+				element.style.opacity = 0;
+				/*
+				iframeWindow.onresize = function(e){
+					onResizeCallback && onResizeCallback(e);
+					console.log("RESIZE");
+					if(element.height !== "0"){
+						//element.style.opacity = 1;
+						elements.push(IframeElement.create(element));
+						
+						if(elements.length === ids.length){
+							clearTimeout(timeout);
+							deferred.resolve(elements);
+						}
+					}
+				}*/
+			});
 		}
-	};
 
-	if(!this.checkLoadedInterval){
-		this.checkLoadedInterval = setInterval(function(){
-			self.checkLoadStatus();
-		},500);
-	}
-};
+		return deferred.promise;
+	};
+}());
+
+var queryTweets = (function(){
+	var endpoint = "http://search.twitter.com/search.json";
+
+	return function(query){
+		return getFromApi(endpoint, [
+			'format=json',
+			'q=' + encodeURIComponent(query)
+		]).then(function(response){
+			var tweetIds = [],
+				dupeCheck = [];
+
+			response.results.forEach(function(item){
+				// Skip retweets
+				if(~dupeCheck.indexOf(item.text)){
+					return;
+				} else {
+					dupeCheck.push(item.text);
+				}
+
+				// Skip matches on username
+				if(~item.from_user.toLowerCase().indexOf(query.toLowerCase())){
+					return;	
+				}
+				
+				tweetIds.push(item.id_str);
+			});
+
+			return tweetIds;
+		});
+	};
+}());

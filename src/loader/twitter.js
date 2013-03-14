@@ -7,8 +7,8 @@ var Q = require('q/q.js'),
 var TIMEOUT = 1000 * 10;
 
 // options should have container and query
-module.exports = function(options){
-	var container = options.container;
+module.exports = function(collage, options){
+	var container = collage.element;
 
 	if(options.query){
 		return queryTweets(options.query).then(function(tweetIds){
@@ -26,7 +26,7 @@ module.exports = function(options){
 var loadTweets = (function(){
 	return function(ids, container){
 		if(!Array.isArray(ids) || !container) return;
-		
+
 		var index = ids.length,
 			deferred = Q.defer(),
 			elements = [],
@@ -97,20 +97,6 @@ var loadTweets = (function(){
 
 				waitingForResize.push(element);
 				element.style.opacity = 0;
-				/*
-				iframeWindow.onresize = function(e){
-					onResizeCallback && onResizeCallback(e);
-					console.log("RESIZE");
-					if(element.height !== "0"){
-						//element.style.opacity = 1;
-						elements.push(IframeElement.create(element));
-						
-						if(elements.length === ids.length){
-							clearTimeout(timeout);
-							deferred.resolve(elements);
-						}
-					}
-				}*/
 			});
 		}
 

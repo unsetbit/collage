@@ -3,6 +3,7 @@ var createQuadtree = require('../../giant-quadtree/dist/quadtree-module.js').cre
 	Surface = require('../../big-surface/dist/surface-module.js');
 	//Surface = require('big-surface/dist/surface-module.js');
 
+var utils = require("./utils.js");
 var BoundingBox = require('./boundingBox.js'),
 	Tag = require('./Tag.js');
 
@@ -14,6 +15,8 @@ var Collage = module.exports = function(container){
 	this.activeTags = [];
 
 	this.updateCanvasDimensions();
+
+	var self = this;
 	window.c = this;
 }
 Collage.prototype = Object.create(Surface.prototype);
@@ -31,12 +34,26 @@ Collage.getApi = function(collage){
 	
 	api.setActiveTags = collage.setActiveTags.bind(collage);
 	
+	api.pause = collage.pause.bind(collage);
+	api.resume = collage.resume.bind(collage);
+
 	api.load = collage.loadElements.bind(collage);
 	api.add = collage.addElements.bind(collage);
 	api.remove = collage.removeElement.bind(collage);
 	api.get = collage.getElements.bind(collage);
 	api.showElement = collage.showElement.bind(collage);
 	api.loader = collage.loader;
+
+	api.fill = function(){
+		collage.updateCanvasDimensions();
+		collage.pickNextElement();
+
+		if(collage.nextElement){
+			return collage.fillCenter();	
+		}
+
+		return [];
+	};
 
 	api.start = collage.start.bind(collage);
 	
@@ -105,7 +122,7 @@ Collage.prototype.loadElements = function(tagNames, arg2, arg3){
 			loaderConfigIndex = loaderConfigs.length;
 
 			while(loaderConfig = loaderConfigs[--loaderConfigIndex]){
-				promise = loader(loaderConfig).then(addElements);
+				promise = loader(this, loaderConfig).then(addElements);
 				promises.push(promise);	
 			}
 		}
@@ -130,6 +147,8 @@ Collage.prototype.addElements = function(tagNames, elements){
 		while(elementIndex--) tag.add(elements[elementIndex]);
 	}
 };
+
+Collage.prototype.fadeInToCenter = function(){};
 
 Collage.prototype.removeElement = function(tagNames, element){
 	if(!Array.isArray(tagNames)) tagNames = [tagNames];
@@ -191,6 +210,24 @@ Collage.prototype.getRandomActiveTag = function(){
 	return tag;
 };
 
+Collage.prototype.pause = function(duration){
+	if(this.savedHorizontalVelocityScalar !== void 0) return;
+	this.savedHorizontalVelocityScalar = this.horizontalVelocityScalar;
+	this.savedVerticalVelocityScalar = this.verticalVelocityScalar;
+	this.setVelocityScalar(0, duration || 0.4);
+};
+
+Collage.prototype.resume = function(duration){
+	if(this.savedHorizontalVelocityScalar === void 0) return;
+
+	this.setHorizontalVelocityScalar(this.savedHorizontalVelocityScalar, (duration || 0.4));
+	this.setVerticalVelocityScalar(this.savedVerticalVelocityScalar, (duration || 0.4));
+	this.savedHorizontalVelocityScalar = void 0;
+};
+
+Collage.prototype.savedHorizontalVelocityScalar = void 0;
+Collage.prototype.savedVerticalVelocityScalar = void 0;
+
 Collage.prototype.getRandomActiveTagFailSafe = 20;
 Collage.prototype.getRandomElementFailSafe = 20;
 Collage.prototype.getRandomElementTryLimit = 20;
@@ -239,7 +276,7 @@ Collage.prototype.start = function(){
 	if(this.activeTags.length === 0){
 		throw new Error("Unable to start without active tags");
 	};
-	
+	this.startTransformLoop();
 	this.updateCanvasDimensions();
 	this.pickNextElement();
 
@@ -334,7 +371,6 @@ Collage.prototype.updateCanvasDimensions = function(){
 };
 
 Collage.prototype.fillCenter = function(){
-
 	var boxes = this.quadtree.getObjects(
 		this.viewportLeft - this.checkWidth,
 		this.viewportTop - this.checkHeight,
@@ -342,7 +378,8 @@ Collage.prototype.fillCenter = function(){
 		this.viewportHeight + this.checkHeight * 2
 	);
 
-	var	scanCheckLeft,
+	var	boundingBoxes = [],
+		scanCheckLeft,
 		scanCheckTop,
 		scanCheckRight,
 		scanCheckBottom,
@@ -367,7 +404,7 @@ Collage.prototype.fillCenter = function(){
 		scanCheckBottom = scanCheckTop + this.checkHeight;
 	
 		if(!hasCollision(boxes, scanCheckLeft, scanCheckTop, scanCheckRight, scanCheckBottom)){
-			this.insertNextElement(scanCheckLeft + this.elementMargin, scanCheckTop + this.elementMargin);
+			boundingBoxes.push(this.insertNextElement(scanCheckLeft + this.elementMargin, scanCheckTop + this.elementMargin));
 			if(!this.nextElement) break;
 
 			missCount = 0;
@@ -381,6 +418,7 @@ Collage.prototype.fillCenter = function(){
 	}
 
 	this.updateElementVisibility();
+	return boundingBoxes;
 };
 
 Collage.prototype.updateBounds = function(){

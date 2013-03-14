@@ -15,7 +15,7 @@ Element.create = function(domElement, width, height){
 
 Element.getApi = function(element){
 	var api = {};
-	
+	api.element = element.element;
 	api.isIn = element.isIn.bind(element);
 	api.reposition = element.reposition.bind(element);
 	api.show = element.show.bind(element);

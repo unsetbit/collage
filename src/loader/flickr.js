@@ -1,58 +1,62 @@
 var Q = require('q/q.js'),
-	SimpleElement = require("../element/Simple.js");
+	SimpleElement = require("../element/Simple.js"),
+	utils = require("../utils.js"),
+	getFromApi = require('./getFromCommonApi.js');
 
-//var endpoint = "http://api.flickr.com/services/feeds/photos_public.gne?format=json";
+http://api.flickr.com/services/rest/?method=flickr.photos.search&api_key=06960d3c3c8affd01e65ec032513557b&license=1,2,3,4,5,6,7,8&sort=relevance&extras=url_z,url_m,path_alias&per_page=20&content_type=1&media=photos&format=json&tags=
+
 var endpoint = "http://api.flickr.com/services/rest/";
-var callbackCounter = 0;
-var callbacks = {};
-window.FLICKR_CALLBACKS = callbacks;
 
+module.exports = getPhotos;
 
-http://api.flickr.com/services/rest/?&&&&&extras=url_z&per_page=10&format=json
+var defaults = {
+	sort: "relevance",
+	count: "20",
+	license: "1,2,3,4,5,6,7,8", // http://www.flickr.com/services/api/flickr.photos.licenses.getInfo.html
+	apiKey: "06960d3c3c8affd01e65ec032513557b",
+	media: "photos",
+	tagMode: "all",
+	isCommons: false,
+	contentType: "1" // Photos only (not screenshots or drawings)
+};
 
-module.exports = function(tags){
+function getPhotos(collage, options){
 	var deferred = Q.defer(),
-		script = document.createElement("script"),
-		callbackId = "cb" + callbackCounter++,
-		src = endpoint + "&jsoncallback=FLICKR_CALLBACKS." + callbackId + "&tags=" + tags; 
+		params;
 	
-	var params = [
-		"method=flickr.photos.search",
-		"api_key=06960d3c3c8affd01e65ec032513557b",
-		
-		// http://www.flickr.com/services/api/flickr.photos.licenses.getInfo.html
-		// Anything but all rights reserved
-		"license=1,2,3,4,5,6,7,8", 
-		"sort=relevance",
-		
-		// z is a size that I think is bounded to 640px
-		"extras=url_z,url_m,path_alias",
-		"per_page=20",
+	if(typeof options === "string") options = {tags: options};
+	utils.extend(options, defaults);
 
-		// Photos only (not screenshots or drawings)
-		"content_type=1",
-		"media=photos",
-
+	params = [
 		"format=json",
-		"tags=" + tags,
-		"jsoncallback=FLICKR_CALLBACKS." + callbackId
+		"method=flickr.photos.search",
+		"extras=url_z,url_m,path_alias",
+		"api_key=" + options.apiKey,
+		"license=" + options.license, 
+		"sort=" + options.sort,
+		"tag_mode=" + options.tagMode,
+		"per_page=" + options.count,
+		"content_type=" + options.contentType,
+		"media=" + options.media,
+		"tags=" + options.tags
 	];
 
-	script.async = true;
-	script.src = endpoint + "?" + params.join("&");
+	if(options.isCommons){
+		params.push("is_commons=" + options.isCommons);
+	}
 
-	callbacks[callbackId] = function(response){
-		delete callbacks[callbackId];
-
+	getFromApi(endpoint, "jsoncallback", params).then(function(response){
 		var elements = [],
-			photos = response.photos && response.photos.photo || [];
+			photos = response.photos && response.photos.photo || [],
 			waiting = photos.length;
-
 
 		photos.forEach(function(item){
 			var url = item.url_z || item.url_m;
 
-			if(!url) return;
+			if(!url){
+				waiting--;
+				return;
+			};
 
 			loadImage(item.url_z || item.url_m).then(function(element){
 				var anchor = document.createElement("a");
@@ -64,15 +68,12 @@ module.exports = function(tags){
 				anchor.appendChild(element);
 				
 				elements.push(SimpleElement.create(anchor));
-
 				if(--waiting === 0) deferred.resolve(elements);
 			}, function(){
 				if(--waiting === 0) deferred.resolve(elements);
 			});
 		});
-	}
-	
-	document.body.appendChild(script);	
+	});
 
 	return deferred.promise;
 };

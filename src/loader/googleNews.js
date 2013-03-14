@@ -6,7 +6,7 @@ var mustache = require("mustache/mustache.js");
 var getFromApi = require('./getFromCommonApi.js');
 var SimpleElement = require("../element/Simple.js");
 	
-module.exports = function(query){
+module.exports = function(collage, query){
 	return search(query);
 };
 

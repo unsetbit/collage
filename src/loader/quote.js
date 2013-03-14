@@ -4,8 +4,7 @@ var SimpleElement = require("../element/Simple.js");
 var documentFragment = document.createDocumentFragment();
 
 module.exports = function(collage, src){
-	var	deferred = Q.defer(),
-		img = new Image();
+	var	element = document.createElement("div");
 	
 	img.src = src;
 

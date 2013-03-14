@@ -5,42 +5,48 @@ var VideoElement = require('../element/Video.js');
 var getFromApi = require('./getFromCommonApi.js');
 var TIMEOUT = 10 * 1000;
 
-module.exports = function(options){
+module.exports = function(collage, options){
 	if(options.query){
-		return queryVideos(options.query).then(function(videoIds){
+		return queryVideos(options).then(function(videoIds){
 			options.videoIds = videoIds;
-			return loadVideos(options);
+			return loadVideos(collage, options);
 		})
 	}
 
 	if(options.videoId){
 		options.videoIds = [options.videoId];
 
-		return loadVideos(options).then(function(elements){
+		return loadVideos(collage, options).then(function(elements){
 			return elements[0];
 		});
 	} else if(options.videoIds){
-		return loadVideos(options);	
+		return loadVideos(collage, options);	
 	}
+};
+
+var defaults = {
+	duration: "short",
+	key: 'AIzaSyAZw0kviWeCOidthcZAYs5oCZ0k8DsOuUk'
 };
 
 var queryVideos = (function(){
 	var endpoint = "https://www.googleapis.com/youtube/v3/search";
 
-	return function(query){
+	return function(options){
+		utils.extend(options, defaults);
+
 		var params = [
 				"part=id",
-				"videoDuration=short",
+				"videoDuration=" + options.duration,
 				"type=video",
 				"videoEmbeddable=true",
 				"videoSyndicated=true",
-				"key=AIzaSyAZw0kviWeCOidthcZAYs5oCZ0k8DsOuUk",
-				"query=" + encodeURIComponent(query)
+				"key=" + options.key,
+				"q=" + encodeURIComponent(options.query)
 			];
 		
 		return getFromApi(endpoint, params).then(function(response){
 			var videoIds = [];
-			
 			response.items.forEach(function(item){
 				videoIds.push(item.id.videoId);
 			});
@@ -51,8 +57,8 @@ var queryVideos = (function(){
 }());
 
 var loadVideos = (function(){
-	return function(options){
-		if(!Array.isArray(options.videoIds) || !options.container) return;
+	return function(collage, options){
+		if(!Array.isArray(options.videoIds)) return;
 		
 		var index = options.videoIds.length,
 			deferred = Q.defer(),
@@ -77,7 +83,7 @@ var loadVideos = (function(){
 		while(index--){
 			videoOptions = Object.create(options);
 			videoOptions.videoId = options.videoIds[index];
-			loadVideo(videoOptions);
+			loadVideo(collage, videoOptions);
 		}
 
 		return deferred.promise;
@@ -88,7 +94,7 @@ var isiOS = (navigator.userAgent.match(/(iPad|iPhone|iPod)/g) ? true : false );
 
 var loadVideo = (function(){
 	var playerIdCounter = 0;
-	return function(options){
+	return function(collage, options){
 		var videoId = options.videoId,
 			width = options.width || 1060,
 			height = options.height || 650;
@@ -103,22 +109,25 @@ var loadVideo = (function(){
 		if(isiOS) element.className += " hide-video-mask";
 
 		element.innerHTML = '<div id="' + playerId + '"></div><div class="video-mask"></div>';
-		options.container.appendChild(element);
+		collage.element.appendChild(element);
 		
 		var videoElement;
 
 		new YT.Player(playerId, {
 			height: height,
 			width: width,
-			playerVars: { 'controls': 0, 'html5': 1 },
+			playerVars: { 
+				controls: 0, 
+				html5: 1,
+				start: (options.startTime || 0)
+			},
 			videoId: videoId,
 			events: {
 				onReady: function(e){
 					var playerObj = e.target;
-
 					videoElement = VideoElement.create(element, playerObj, {
 						continuousPlay: options.continuousPlay,
-						autoPlay: options.autoPlay,
+						autoplay: options.autoplay,
 						loop: options.loop
 					});
 					
@@ -144,6 +153,8 @@ var loadVideo = (function(){
 					}
 					
 					if(options.callback) options.callback(videoElement);
+				},
+				onError: function(e){
 				}
 			}
 		});

@@ -65,7 +65,7 @@ VideoElement.create = function(element, player, options){
 	var videoElement = new VideoElement(element, player);
 
 	if(options.continuousPlay) videoElement.continuousPlay = true;
-	if(options.autoPlay) videoElement.autoPlay = true;
+	if(options.autoplay) videoElement.autoplay = true;
 	if(options.loop) videoElement.loop = true;
 	
 	return VideoElement.getApi(videoElement);
@@ -82,8 +82,9 @@ VideoElement.getApi = function(element){
 };
 
 VideoElement.prototype.continuousPlay = false;
-VideoElement.prototype.autoPlay = false;
+VideoElement.prototype.autoplay = (navigator.userAgent.match(/(iPad|iPhone|iPod)/g) ? false : true );
 VideoElement.prototype.loop = false;
+VideoElement.prototype.playing = false;
 
 VideoElement.prototype.errorHandler = function(e){
 	if(e.data === 150){
@@ -112,7 +113,13 @@ VideoElement.prototype.hide = function(){
 VideoElement.prototype.show = function(left, top){
 	this.element.style.opacity = 1;
 	Element.prototype.show.call(this, left, top);
-	if(this.autoPlay) this.player.playVideo();
+	
+	if(this.playing && !this.continuousPlay){
+		this.player.playVideo();
+	} else if(!this.playing && this.autoplay) {
+		this.playing = true;
+		this.player.playVideo();
+	}
 };
 
 VideoElement.prototype.statusChangeHandler = function(status){

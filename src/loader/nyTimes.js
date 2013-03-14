@@ -14,35 +14,60 @@ var ARTICLE_TEMPLATE = '' +
 
 var documentFragment = document.createDocumentFragment();
 
-module.exports = function(data){
-	var self = this,
-		element = document.createElement("div");
-	
-	element.className = "nytimes-article";
+module.exports = function(collage, options){
+	return query(options);
+};
 
-	var templateData = {
-		title: data.title,
-		byline: data.byline,
-		date: (new Date(data.publication_year, data.publication_month, data.publication_day)).toLocaleDateString(),
-		body: data.body,
-		url: data.url
+function query(options){
+	return load().then(function(response){
+		return response.results.map(function(data){
+			element = document.createElement("div");
+			element.className = "nytimes-article";
+
+			var templateData = {
+				title: data.title,
+				byline: data.byline,
+				date: (new Date(data.publication_year, data.publication_month, data.publication_day)).toLocaleDateString(),
+				body: data.body,
+				url: data.url
+			};
+
+			if(data.small_image_url){
+				templateData.image = {
+					src: data.small_image_url.replace(/thumbStandard.*\./, "hpMedium."),
+					height: 253,
+					width: 337
+				};
+			}
+
+			element.innerHTML = mustache.render(ARTICLE_TEMPLATE, templateData);
+			document.body.appendChild(element);
+
+			element.width = element.clientWidth;
+			element.height = element.clientHeight;
+
+			documentFragment.appendChild(element);
+			console.log(element);
+			return new SimpleElement(element);
+		});
+	});
+}
+
+function load(options){
+	var deferred = Q.defer();
+	
+	var request = new XMLHttpRequest();
+
+	request.onload = function(){
+		deferred.resolve(JSON.parse(this.responseText));
 	};
 
-	if(data.small_image_url){
-		templateData.image = {
-			src: data.small_image_url.replace(/thumbStandard.*\./, "hpMedium."),
-			height: 253,
-			width: 337
-		};
-	}
+	request.onerror = function(){
+		deferred.reject();
+	};
 
-	element.innerHTML = mustache.render(ARTICLE_TEMPLATE, templateData);
-	document.body.appendChild(element);
+	request.open("get", "nytimes.json", true);
+	request.send();
 
-	element.width = element.clientWidth;
-	element.height = element.clientHeight;
-
-	documentFragment.appendChild(element);
-
-	return	Q.resolve(new SimpleElement(element));
-};
+	return deferred.promise;
+}

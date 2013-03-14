@@ -1,5 +1,5 @@
 ;module.exports = (function(){
-var __m23 = function(module,exports){module.exports=exports;
+var __m26 = function(module,exports){module.exports=exports;
 /*!
  * mustache.js - Logic-less {{mustache}} templates with JavaScript
  * http://github.com/janl/mustache.js
@@ -612,7 +612,7 @@ var __m23 = function(module,exports){module.exports=exports;
 }())));
 
 ;return module.exports;}({},{});
-var __m22 = function(module,exports){module.exports=exports;
+var __m25 = function(module,exports){module.exports=exports;
 /**
  * EventEmitter v4.0.5 - git.io/ee
  * Oliver Caldwell
@@ -928,7 +928,7 @@ var __m22 = function(module,exports){module.exports=exports;
     }
 }(this));
 ;return module.exports;}({},{});
-var __m21 = function(module,exports){module.exports=exports;
+var __m24 = function(module,exports){module.exports=exports;
 module.exports = Element;
 
 function Element(domElement, width, height){
@@ -946,7 +946,7 @@ Element.create = function(domElement, width, height){
 
 Element.getApi = function(element){
 	var api = {};
-	
+	api.element = element.element;
 	api.isIn = element.isIn.bind(element);
 	api.reposition = element.reposition.bind(element);
 	api.show = element.show.bind(element);
@@ -1008,8 +1008,8 @@ Element.prototype.show = function(left, top){
 	this.isVisible = true;
 };
 ;return module.exports;}({},{});
-var __m17 = function(module,exports){module.exports=exports;
-var Element = __m21;
+var __m20 = function(module,exports){module.exports=exports;
+var Element = __m24;
 
 module.exports = IframeElement;
 
@@ -1018,16 +1018,17 @@ var isiOS = (navigator.userAgent.match(/(iPad|iPhone|iPod)/g) ? true : false );
 
 function IframeElement (element){
 	Element.call(this, element, parseInt(element.width), parseInt(element.height));
-	this.iframe = iframe = this.element.querySelector('iframe') || this.element;
 
+	this.iframe = this.element.querySelector('iframe') || this.element;
+	this.isLocal = this.iframe.contentDocument && this.iframe.contentDocument.body && this.iframe.contentDocument.body.innerHTML !== "";
+	
 	// Hack to fix for iOS's failure to render the inside of a iframe 
 	// when using css transforms. If we have permission to edit the iframe,
 	// this method is much more performant that the hack in .show
-	if(isiOS && this.iframe.contentDocument.body.innerHTML !== ""){
-		this.isLocal = true;
+	if(isiOS && this.isLocal){
 		this.iframe.contentDocument.body.style.webkitTransform = "translate3d(0, 0, 0)";
 	}
-		
+
 	this.hide();
 };
 IframeElement.prototype = Object.create(Element.prototype);
@@ -1070,9 +1071,45 @@ IframeElement.prototype.show = function(left, top){
 };
 
 ;return module.exports;}({},{});
-var __m19 = function(module,exports){module.exports=exports;
-__m22;
-var Element = __m21;
+var __m21 = function(module,exports){module.exports=exports;
+var Element = __m24;
+
+module.exports = SimpleElement;
+
+function SimpleElement (element){
+	Element.call(this, element, parseInt(element.width), parseInt(element.height));
+	this.appended;
+};
+SimpleElement.prototype = Object.create(Element.prototype);
+
+SimpleElement.create = function(element){
+	element = new SimpleElement(element);
+	return SimpleElement.getApi(element);
+}
+
+SimpleElement.getApi = function(element){
+	return Element.getApi(element);
+};
+
+var hidingArea = document.createDocumentFragment();
+SimpleElement.prototype.hide = function(){	
+	Element.prototype.hide.call(this);
+	this.element.style.display = "none";
+	//hidingArea.appendChild(this.element);
+};
+
+SimpleElement.prototype.show = function(left, top, container){
+	Element.prototype.show.call(this, left, top);
+	this.element.style.display = "block";
+	if(!this.appended){
+		container.appendChild(this.element);
+		this.appended = true;
+	}
+};
+;return module.exports;}({},{});
+var __m22 = function(module,exports){module.exports=exports;
+__m25;
+var Element = __m24;
 
 module.exports = VideoElement;
 
@@ -1138,7 +1175,7 @@ VideoElement.create = function(element, player, options){
 	var videoElement = new VideoElement(element, player);
 
 	if(options.continuousPlay) videoElement.continuousPlay = true;
-	if(options.autoPlay) videoElement.autoPlay = true;
+	if(options.autoplay) videoElement.autoplay = true;
 	if(options.loop) videoElement.loop = true;
 	
 	return VideoElement.getApi(videoElement);
@@ -1155,8 +1192,9 @@ VideoElement.getApi = function(element){
 };
 
 VideoElement.prototype.continuousPlay = false;
-VideoElement.prototype.autoPlay = false;
+VideoElement.prototype.autoplay = (navigator.userAgent.match(/(iPad|iPhone|iPod)/g) ? false : true );
 VideoElement.prototype.loop = false;
+VideoElement.prototype.playing = false;
 
 VideoElement.prototype.errorHandler = function(e){
 	if(e.data === 150){
@@ -1185,7 +1223,13 @@ VideoElement.prototype.hide = function(){
 VideoElement.prototype.show = function(left, top){
 	this.element.style.opacity = 1;
 	Element.prototype.show.call(this, left, top);
-	if(this.autoPlay) this.player.playVideo();
+	
+	if(this.playing && !this.continuousPlay){
+		this.player.playVideo();
+	} else if(!this.playing && this.autoplay) {
+		this.playing = true;
+		this.player.playVideo();
+	}
 };
 
 VideoElement.prototype.statusChangeHandler = function(status){
@@ -1218,48 +1262,12 @@ VideoElement.prototype.statusChangeHandler = function(status){
 	}
 }
 ;return module.exports;}({},{});
-var __m18 = function(module,exports){module.exports=exports;
-var Element = __m21;
-
-module.exports = SimpleElement;
-
-function SimpleElement (element){
-	Element.call(this, element, parseInt(element.width), parseInt(element.height));
-	this.appended;
-};
-SimpleElement.prototype = Object.create(Element.prototype);
-
-SimpleElement.create = function(element){
-	element = new SimpleElement(element);
-	return SimpleElement.getApi(element);
-}
-
-SimpleElement.getApi = function(element){
-	return Element.getApi(element);
-};
-
-var hidingArea = document.createDocumentFragment();
-SimpleElement.prototype.hide = function(){	
-	Element.prototype.hide.call(this);
-	this.element.style.display = "none";
-	//hidingArea.appendChild(this.element);
-};
-
-SimpleElement.prototype.show = function(left, top, container){
-	Element.prototype.show.call(this, left, top);
-	this.element.style.display = "block";
-	if(!this.appended){
-		container.appendChild(this.element);
-		this.appended = true;
-	}
-};
+var __m7 = function(module,exports){module.exports=exports;
+exports.Iframe = __m20;
+exports.Simple = __m21;
+exports.Video = __m22;
 ;return module.exports;}({},{});
-var __m6 = function(module,exports){module.exports=exports;
-exports.Iframe = __m17;
-exports.Simple = __m18;
-exports.Video = __m19;
-;return module.exports;}({},{});
-var __m8 = function(module,exports){module.exports=exports;
+var __m9 = function(module,exports){module.exports=exports;
 ;module.exports = (function(){
 var __m2 = function(module,exports){module.exports=exports;
 ;module.exports = (function(){
@@ -1694,7 +1702,7 @@ Surface.prototype.updateMultiAttributeStyle = function(styleName, attributes, wi
 
 ;return module.exports;}({},{});return __m0;}());
 ;return module.exports;}({},{});
-var __m7 = function(module,exports){module.exports=exports;
+var __m8 = function(module,exports){module.exports=exports;
 // vim:ts=4:sts=4:sw=4:
 /*!
  *
@@ -3266,13 +3274,13 @@ var qEndingLine = captureLine();
 });
 
 ;return module.exports;}({},{});
-var __m10 = function(module,exports){module.exports=exports;
-var Q = __m7;
-var SimpleElement = __m18;
+var __m11 = function(module,exports){module.exports=exports;
+var Q = __m8;
+var SimpleElement = __m21;
 
 var documentFragment = document.createDocumentFragment();
 
-module.exports = function(src){
+module.exports = function(collage, src){
 	var	deferred = Q.defer(),
 		img = new Image();
 	
@@ -3289,108 +3297,10 @@ module.exports = function(src){
 	return deferred.promise;
 };
 ;return module.exports;}({},{});
-var __m9 = function(module,exports){module.exports=exports;
-var Q = __m7,
-	SimpleElement = __m18;
-
-//var endpoint = "http://api.flickr.com/services/feeds/photos_public.gne?format=json";
-var endpoint = "http://api.flickr.com/services/rest/";
-var callbackCounter = 0;
-var callbacks = {};
-window.FLICKR_CALLBACKS = callbacks;
-
-
-http://api.flickr.com/services/rest/?&&&&&extras=url_z&per_page=10&format=json
-
-module.exports = function(tags){
-	var deferred = Q.defer(),
-		script = document.createElement("script"),
-		callbackId = "cb" + callbackCounter++,
-		src = endpoint + "&jsoncallback=FLICKR_CALLBACKS." + callbackId + "&tags=" + tags; 
-	
-	var params = [
-		"method=flickr.photos.search",
-		"api_key=06960d3c3c8affd01e65ec032513557b",
-		
-		// http://www.flickr.com/services/api/flickr.photos.licenses.getInfo.html
-		// Anything but all rights reserved
-		"license=1,2,3,4,5,6,7,8", 
-		"sort=relevance",
-		
-		// z is a size that I think is bounded to 640px
-		"extras=url_z,url_m,path_alias",
-		"per_page=20",
-
-		// Photos only (not screenshots or drawings)
-		"content_type=1",
-		"media=photos",
-
-		"format=json",
-		"tags=" + tags,
-		"jsoncallback=FLICKR_CALLBACKS." + callbackId
-	];
-
-	script.async = true;
-	script.src = endpoint + "?" + params.join("&");
-
-	callbacks[callbackId] = function(response){
-		delete callbacks[callbackId];
-
-		var elements = [],
-			photos = response.photos && response.photos.photo || [];
-			waiting = photos.length;
-
-
-		photos.forEach(function(item){
-			var url = item.url_z || item.url_m;
-
-			if(!url) return;
-
-			loadImage(item.url_z || item.url_m).then(function(element){
-				var anchor = document.createElement("a");
-				anchor.href = "http://www.flickr.com/photos/" + item.pathalias + "/" + item.id + "/";
-				anchor.width = element.width;
-				anchor.height = element.height;
-				anchor.target = "_blank";
-				anchor.style.display = "block";
-				anchor.appendChild(element);
-				
-				elements.push(SimpleElement.create(anchor));
-
-				if(--waiting === 0) deferred.resolve(elements);
-			}, function(){
-				if(--waiting === 0) deferred.resolve(elements);
-			});
-		});
-	}
-	
-	document.body.appendChild(script);	
-
-	return deferred.promise;
-};
-
-var documentFragment = document.createDocumentFragment();
-function loadImage(src){
-	var	deferred = Q.defer(),
-		img = new Image();
-	
-	img.src = src;
-
-	img.onload = function(){
-		// This forces FF to set the width/height
-		documentFragment.appendChild(img);
-		deferred.resolve(img);
-	};
-
-	img.onerror = deferred.reject.bind(deferred);
-
-	return deferred.promise;
-};
-;return module.exports;}({},{});
-var __m14 = function(module,exports){module.exports=exports;
-var Q = __m7,
-	SimpleElement = __m18,
-	mustache = __m23;
+var __m15 = function(module,exports){module.exports=exports;
+var Q = __m8,
+	SimpleElement = __m21,
+	mustache = __m26;
 
 var ARTICLE_TEMPLATE = '' +
 		'<h2><a href="{{url}}">{{{title}}}</a></h2>' +
@@ -3404,58 +3314,89 @@ var ARTICLE_TEMPLATE = '' +
 
 var documentFragment = document.createDocumentFragment();
 
-module.exports = function(data){
-	var self = this,
-		element = document.createElement("div");
-	
-	element.className = "nytimes-article";
+module.exports = function(collage, options){
+	return query(options);
+};
 
-	var templateData = {
-		title: data.title,
-		byline: data.byline,
-		date: (new Date(data.publication_year, data.publication_month, data.publication_day)).toLocaleDateString(),
-		body: data.body,
-		url: data.url
+function query(options){
+	return load().then(function(response){
+		return response.results.map(function(data){
+			element = document.createElement("div");
+			element.className = "nytimes-article";
+
+			var templateData = {
+				title: data.title,
+				byline: data.byline,
+				date: (new Date(data.publication_year, data.publication_month, data.publication_day)).toLocaleDateString(),
+				body: data.body,
+				url: data.url
+			};
+
+			if(data.small_image_url){
+				templateData.image = {
+					src: data.small_image_url.replace(/thumbStandard.*\./, "hpMedium."),
+					height: 253,
+					width: 337
+				};
+			}
+
+			element.innerHTML = mustache.render(ARTICLE_TEMPLATE, templateData);
+			document.body.appendChild(element);
+
+			element.width = element.clientWidth;
+			element.height = element.clientHeight;
+
+			documentFragment.appendChild(element);
+			console.log(element);
+			return new SimpleElement(element);
+		});
+	});
+}
+
+function load(options){
+	var deferred = Q.defer();
+	
+	var request = new XMLHttpRequest();
+
+	request.onload = function(){
+		deferred.resolve(JSON.parse(this.responseText));
 	};
 
-	if(data.small_image_url){
-		templateData.image = {
-			src: data.small_image_url.replace(/thumbStandard.*\./, "hpMedium."),
-			height: 253,
-			width: 337
-		};
-	}
+	request.onerror = function(){
+		deferred.reject();
+	};
 
-	element.innerHTML = mustache.render(ARTICLE_TEMPLATE, templateData);
-	document.body.appendChild(element);
+	request.open("get", "nytimes.json", true);
+	request.send();
 
-	element.width = element.clientWidth;
-	element.height = element.clientHeight;
-
-	documentFragment.appendChild(element);
-
-	return	Q.resolve(new SimpleElement(element));
-};
+	return deferred.promise;
+}
 ;return module.exports;}({},{});
-var __m20 = function(module,exports){module.exports=exports;
-var Q = __m7;
+var __m23 = function(module,exports){module.exports=exports;
+var Q = __m8;
+
+window.API_CALLBACKS = {};
 
 module.exports = (function(){
 	var callbackCounter = 0,
-		callbacks = {},
+		callbacks = window.API_CALLBACKS,
 		defaultTimeout = 10 * 1000;
 
-	window.GOOGLE_API_CALLBACKS = callbacks;
-
-	return function getFromGoogle(endpoint, params, timeout){
+	return function(endpoint, callbackParam, params, timeout){
 		var callbackId = "c" + callbackCounter++,
 			deferred = Q.defer(),
 			script = document.createElement("script"),
 			timeoutId;
 		
+		if(typeof callbackParam !== "string"){
+			timeout = params;
+			params = callbackParam;
+			callbackParam = "callback";
+		}
+
 		timeout = timeout || defaultTimeout;
 		params = params || [];
-		params.push("callback=GOOGLE_API_CALLBACKS." + callbackId);
+		params.push(callbackParam + "=API_CALLBACKS." + callbackId);
 
 		timeoutId = setTimeout(function(){
 			deferred.reject("timeout");
@@ -3470,54 +3411,61 @@ module.exports = (function(){
 		script.async = true;
 		script.src = endpoint + "?" + params.join("&"); 
 		document.body.appendChild(script);
+
 		return deferred.promise;
 	}
 }());
 ;return module.exports;}({},{});
-var __m11 = function(module,exports){module.exports=exports;
-__m22;
+var __m12 = function(module,exports){module.exports=exports;
+__m25;
 
-var Q = __m7;
-var VideoElement = __m19;
-var getFromApi = __m20;
+var Q = __m8;
+var VideoElement = __m22;
+var getFromApi = __m23;
 var TIMEOUT = 10 * 1000;
 
-module.exports = function(options){
+module.exports = function(collage, options){
 	if(options.query){
-		return queryVideos(options.query).then(function(videoIds){
+		return queryVideos(options).then(function(videoIds){
 			options.videoIds = videoIds;
-			return loadVideos(options);
+			return loadVideos(collage, options);
 		})
 	}
 
 	if(options.videoId){
 		options.videoIds = [options.videoId];
 
-		return loadVideos(options).then(function(elements){
+		return loadVideos(collage, options).then(function(elements){
 			return elements[0];
 		});
 	} else if(options.videoIds){
-		return loadVideos(options);	
+		return loadVideos(collage, options);	
 	}
+};
+
+var defaults = {
+	duration: "short",
+	key: 'AIzaSyAZw0kviWeCOidthcZAYs5oCZ0k8DsOuUk'
 };
 
 var queryVideos = (function(){
 	var endpoint = "https://www.googleapis.com/youtube/v3/search";
 
-	return function(query){
+	return function(options){
+		utils.extend(options, defaults);
+
 		var params = [
 				"part=id",
-				"videoDuration=short",
+				"videoDuration=" + options.duration,
 				"type=video",
 				"videoEmbeddable=true",
 				"videoSyndicated=true",
-				"key=AIzaSyAZw0kviWeCOidthcZAYs5oCZ0k8DsOuUk",
-				"query=" + encodeURIComponent(query)
+				"key=" + options.key,
+				"q=" + encodeURIComponent(options.query)
 			];
 		
 		return getFromApi(endpoint, params).then(function(response){
 			var videoIds = [];
-			
 			response.items.forEach(function(item){
 				videoIds.push(item.id.videoId);
 			});
@@ -3528,8 +3476,8 @@ var queryVideos = (function(){
 }());
 
 var loadVideos = (function(){
-	return function(options){
-		if(!Array.isArray(options.videoIds) || !options.container) return;
+	return function(collage, options){
+		if(!Array.isArray(options.videoIds)) return;
 		
 		var index = options.videoIds.length,
 			deferred = Q.defer(),
@@ -3554,7 +3502,7 @@ var loadVideos = (function(){
 		while(index--){
 			videoOptions = Object.create(options);
 			videoOptions.videoId = options.videoIds[index];
-			loadVideo(videoOptions);
+			loadVideo(collage, videoOptions);
 		}
 
 		return deferred.promise;
@@ -3565,7 +3513,7 @@ var isiOS = (navigator.userAgent.match(/(iPad|iPhone|iPod)/g) ? true : false );
 
 var loadVideo = (function(){
 	var playerIdCounter = 0;
-	return function(options){
+	return function(collage, options){
 		var videoId = options.videoId,
 			width = options.width || 1060,
 			height = options.height || 650;
@@ -3580,22 +3528,25 @@ var loadVideo = (function(){
 		if(isiOS) element.className += " hide-video-mask";
 
 		element.innerHTML = '<div id="' + playerId + '"></div><div class="video-mask"></div>';
-		options.container.appendChild(element);
+		collage.element.appendChild(element);
 		
 		var videoElement;
 
 		new YT.Player(playerId, {
 			height: height,
 			width: width,
-			playerVars: { 'controls': 0, 'html5': 1 },
+			playerVars: { 
+				controls: 0, 
+				html5: 1,
+				start: (options.startTime || 0)
+			},
 			videoId: videoId,
 			events: {
 				onReady: function(e){
 					var playerObj = e.target;
-
 					videoElement = VideoElement.create(element, playerObj, {
 						continuousPlay: options.continuousPlay,
-						autoPlay: options.autoPlay,
+						autoplay: options.autoplay,
 						loop: options.loop
 					});
 					
@@ -3621,6 +3572,8 @@ var loadVideo = (function(){
 					}
 					
 					if(options.callback) options.callback(videoElement);
+				},
+				onError: function(e){
 				}
 			}
 		});
@@ -3628,13 +3581,13 @@ var loadVideo = (function(){
 }());
 
 ;return module.exports;}({},{});
-var __m12 = function(module,exports){module.exports=exports;
-var Q = __m7;
-var mustache = __m23;
-var getFromApi = __m20;
-var SimpleElement = __m18;
+var __m13 = function(module,exports){module.exports=exports;
+var Q = __m8;
+var mustache = __m26;
+var getFromApi = __m23;
+var SimpleElement = __m21;
 	
-module.exports = function(query){
+module.exports = function(collage, query){
 	return queryActivities(query);
 };
 
@@ -3730,16 +3683,16 @@ var queryActivities = (function(){
 }());
 
 ;return module.exports;}({},{});
-var __m13 = function(module,exports){module.exports=exports;
+var __m14 = function(module,exports){module.exports=exports;
 // This one is a bit questionable since it's deprecated, and the TOS for use in
 // collages is unclear.
 
-var Q = __m7;
-var mustache = __m23;
-var getFromApi = __m20;
-var SimpleElement = __m18;
+var Q = __m8;
+var mustache = __m26;
+var getFromApi = __m23;
+var SimpleElement = __m21;
 	
-module.exports = function(query){
+module.exports = function(collage, query){
 	return search(query);
 };
 
@@ -3812,18 +3765,18 @@ var search = (function(){
 
 
 ;return module.exports;}({},{});
-var __m15 = function(module,exports){module.exports=exports;
+var __m16 = function(module,exports){module.exports=exports;
 // This uses an undocumented twitter api (twttr.widget.createTweet) so it might break
 
-var Q = __m7,
-	getFromApi = __m20,	
-	IframeElement = __m17;
+var Q = __m8,
+	getFromApi = __m23,	
+	IframeElement = __m20;
 
 var TIMEOUT = 1000 * 10;
 
 // options should have container and query
-module.exports = function(options){
-	var container = options.container;
+module.exports = function(collage, options){
+	var container = collage.element;
 
 	if(options.query){
 		return queryTweets(options.query).then(function(tweetIds){
@@ -3841,7 +3794,7 @@ module.exports = function(options){
 var loadTweets = (function(){
 	return function(ids, container){
 		if(!Array.isArray(ids) || !container) return;
-		
+
 		var index = ids.length,
 			deferred = Q.defer(),
 			elements = [],
@@ -3912,20 +3865,6 @@ var loadTweets = (function(){
 
 				waitingForResize.push(element);
 				element.style.opacity = 0;
-				/*
-				iframeWindow.onresize = function(e){
-					onResizeCallback && onResizeCallback(e);
-					console.log("RESIZE");
-					if(element.height !== "0"){
-						//element.style.opacity = 1;
-						elements.push(IframeElement.create(element));
-						
-						if(elements.length === ids.length){
-							clearTimeout(timeout);
-							deferred.resolve(elements);
-						}
-					}
-				}*/
 			});
 		}
 
@@ -3965,100 +3904,7 @@ var queryTweets = (function(){
 	};
 }());
 ;return module.exports;}({},{});
-var __m16 = function(module,exports){module.exports=exports;
-var getFromApi = __m20,
-	IframeElement = __m17,
-	mustache = __m23;
-
-var endpoint = "https://graph.facebook.com/search";
-
-/*
-var LIKE_BOX_TEMPLATE = '' +
-'<div 	class="fb-like-box" ' +
-		'data-href="https://www.facebook.com/{{id}}" ' +
-		'data-width="400" ' +
-		'data-height="500" ' +
-		'data-show-faces="true" ' +
-		'data-stream="true" ' +
-		'data-header="false">' +
-'</div>';
-*/
-
-module.exports = function(options){
-	switch(options.type){
-		case "pages":
-			return createPages(options)
-		break;
-	}
-};
-
-var ACTIVITY_BOX_TEMPLATE = '<div class="fb-activity" data-site="www.hrc.org" data-width="300" data-height="350" data-header="false" data-recommendations="false"></div>'
-
-//var LIKE_BOX_TEMPLATE = '<fb:like-box href="https://www.facebook.com/{{id}}" width="400" height="500" show_faces="true" stream="true" header="false"></fb:like-box>';
-
-var LIKE_BOX_TEMPLATE = '<div class="fb-like-box" data-href="http://www.facebook.com/{{id}}" data-width="400" data-height="500" data-show-faces="true" data-stream="false" data-header="false"></div>';
-
-function createPages(options){
-	var container = options.container;
-
-	return getFromApi(endpoint, [
-		'type=page',
-		'fields=link,likes',
-		'limit=3',
-		'q=' + encodeURIComponent(options.query)
-	]).then(function(response){
-		var elements = [];
-
-		response.data.forEach(function(item){
-			var element = document.createElement("div");
-			element.className="fb-like-box";
-			element.style.opacity = 0;
-			element.innerHTML = mustache.render(LIKE_BOX_TEMPLATE, {id: item.id});
-			
-			var mask = document.createElement("div");
-			mask.className = "iframe-mask";
-			element.appendChild(mask);
-
-			var hasFocus = false;
-			mask.addEventListener("click", function(e){
-				mask.className += " in-focus";
-				hasFocus = true;
-				options.onFocus();
-			});
-
-			mask.addEventListener("mouseover", function(e){
-				if(!hasFocus) return;
-				hasFocus = false;
-				mask.className = mask.className.replace(" in-focus", "");
-				options.onBlur();
-			});
-
-			container.appendChild(element);
-			
-			FB.XFBML.parse(element);
-			element.width = element.clientWidth;
-			element.height = element.clientHeight;
-			
-			var iframeElement = new IframeElement(element);
-			elements.push(iframeElement);
-		});
-
-		return elements;
-	});
-};
-
-;return module.exports;}({},{});
 var __m5 = function(module,exports){module.exports=exports;
-exports.flickr = __m9;
-exports.image = __m10;
-exports.youtube = __m11;
-exports.googlePlus = __m12;
-exports.googleNews = __m13;
-exports.nyTimes = __m14;
-exports.twitter = __m15;
-exports.facebook = __m16;
-;return module.exports;}({},{});
-var __m4 = function(module,exports){module.exports=exports;
 module.exports = Tag;
 
 function Tag(){
@@ -4103,7 +3949,7 @@ Tag.prototype.getRandomElement = function(){
 
 
 ;return module.exports;}({},{});
-var __m3 = function(module,exports){module.exports=exports;
+var __m4 = function(module,exports){module.exports=exports;
 var BoundingBox = module.exports = function(element, left, top){
 	this.element = element;
 	this.top = top || 0;
@@ -4129,6 +3975,388 @@ BoundingBox.prototype.hide = function(container){
 	this.visible = false;
 	this.element.hide(container);
 };
+;return module.exports;}({},{});
+var __m3 = function(module,exports){module.exports=exports;
+exports.extend = function(destination, nSource){
+	var sources = arguments.length,
+		index = 1,
+		source,
+		key;
+
+	for(; index < sources; index++){
+		source = arguments[index];
+		for(key in source){
+			if(source.hasOwnProperty(key) && !(key in destination)){
+				destination[key] = source[key];
+			}
+		}
+	}
+};
+
+exports.attachIframeToCollage = function(collage, iframe, width, height){
+	var container = document.createElement("div");
+	container.className="iframe-container";
+	
+	var overflowWrapper = document.createElement("div");
+	overflowWrapper.className = "iframe-overflow-wrapper";
+	overflowWrapper.style.width = width + "px";
+	overflowWrapper.style.height = height + "px";
+	container.appendChild(overflowWrapper);
+
+	iframe.style.width = width + "px";
+	iframe.style.height = height + "px";
+	overflowWrapper.appendChild(iframe);
+
+	var mask = document.createElement("div");
+	mask.className = "iframe-mask";
+	container.appendChild(mask);
+
+	var hasFocus = false;
+	mask.addEventListener("click", function(e){
+		hasFocus = true;
+		container.className += " in-focus";
+		collage.pause(0.4);
+	});
+
+	mask.addEventListener("mouseover", function(e){
+		if(!hasFocus) return;
+		hasFocus = false;
+		container.className = container.className.replace(" in-focus", "");
+		collage.resume(0.4);
+	});
+
+	collage.element.appendChild(container);
+	
+	return container;
+}
+
+
+exports.requestAnimationFrame = window.requestAnimationFrame || 
+								window.mozRequestAnimationFrame ||
+                              	window.webkitRequestAnimationFrame || 
+                              	window.msRequestAnimationFrame || 
+                              	function(cb){return setTimeout(cb, 15);};
+
+exports.cancelAnimationFrame = 	window.cancelAnimationFrame || 
+								window.mozCancelAnimationFrame ||
+                              	window.webkitCancelAnimationFrame || 
+                              	window.msCancelAnimationFrame || 
+                              	function(timeout){return clearTimeout(timeout);};
+
+exports.requestFullscreen = document.documentElement.requestFullscreen ||
+							document.documentElement.mozRequestFullScreen ||
+							document.documentElement.webkitRequestFullscreen ||
+							function(){};
+
+var bodyStyle = document.body.style;	
+exports.transitionAttribute =	(bodyStyle.msTransition !== void 0) && "msTransition" ||
+								(bodyStyle.webkitTransition !== void 0) && "webkitTransition" ||
+								(bodyStyle.MozTransition !== void 0) && "MozTransition" || 
+								(bodyStyle.transition !== void 0) && "transition";
+
+;return module.exports;}({},{});
+var __m10 = function(module,exports){module.exports=exports;
+var Q = __m8,
+	SimpleElement = __m21,
+	utils = __m3,
+	getFromApi = __m23;
+
+http://api.flickr.com/services/rest/?method=flickr.photos.search&api_key=06960d3c3c8affd01e65ec032513557b&license=1,2,3,4,5,6,7,8&sort=relevance&extras=url_z,url_m,path_alias&per_page=20&content_type=1&media=photos&format=json&tags=
+
+var endpoint = "http://api.flickr.com/services/rest/";
+
+module.exports = getPhotos;
+
+var defaults = {
+	sort: "relevance",
+	count: "20",
+	license: "1,2,3,4,5,6,7,8", // http://www.flickr.com/services/api/flickr.photos.licenses.getInfo.html
+	apiKey: "06960d3c3c8affd01e65ec032513557b",
+	media: "photos",
+	tagMode: "all",
+	isCommons: false,
+	contentType: "1" // Photos only (not screenshots or drawings)
+};
+
+function getPhotos(collage, options){
+	var deferred = Q.defer(),
+		params;
+	
+	if(typeof options === "string") options = {tags: options};
+	utils.extend(options, defaults);
+
+	params = [
+		"format=json",
+		"method=flickr.photos.search",
+		"extras=url_z,url_m,path_alias",
+		"api_key=" + options.apiKey,
+		"license=" + options.license, 
+		"sort=" + options.sort,
+		"tag_mode=" + options.tagMode,
+		"per_page=" + options.count,
+		"content_type=" + options.contentType,
+		"media=" + options.media,
+		"tags=" + options.tags
+	];
+
+	if(options.isCommons){
+		params.push("is_commons=" + options.isCommons);
+	}
+
+	getFromApi(endpoint, "jsoncallback", params).then(function(response){
+		var elements = [],
+			photos = response.photos && response.photos.photo || [],
+			waiting = photos.length;
+
+		photos.forEach(function(item){
+			var url = item.url_z || item.url_m;
+
+			if(!url){
+				waiting--;
+				return;
+			};
+
+			loadImage(item.url_z || item.url_m).then(function(element){
+				var anchor = document.createElement("a");
+				anchor.href = "http://www.flickr.com/photos/" + item.pathalias + "/" + item.id + "/";
+				anchor.width = element.width;
+				anchor.height = element.height;
+				anchor.target = "_blank";
+				anchor.style.display = "block";
+				anchor.appendChild(element);
+				
+				elements.push(SimpleElement.create(anchor));
+				if(--waiting === 0) deferred.resolve(elements);
+			}, function(){
+				if(--waiting === 0) deferred.resolve(elements);
+			});
+		});
+	});
+
+	return deferred.promise;
+};
+
+var documentFragment = document.createDocumentFragment();
+function loadImage(src){
+	var	deferred = Q.defer(),
+		img = new Image();
+	
+	img.src = src;
+
+	img.onload = function(){
+		// This forces FF to set the width/height
+		documentFragment.appendChild(img);
+		deferred.resolve(img);
+	};
+
+	img.onerror = deferred.reject.bind(deferred);
+
+	return deferred.promise;
+};
+;return module.exports;}({},{});
+var __m17 = function(module,exports){module.exports=exports;
+var Q = __m8,
+	getFromApi = __m23,
+	IframeElement = __m20,
+	mustache = __m26,
+	utils = __m3;
+
+var endpoint = "https://graph.facebook.com/search";
+
+module.exports = function(collage, options){
+	switch(options.type){
+		case "pages":
+			return createPages(collage, options)
+		break;
+	}
+};
+
+var ACTIVITY_BOX_TEMPLATE = '<div class="fb-activity" data-site="www.hrc.org" data-width="{{width}}" data-height="{{height}}" data-header="false" data-recommendations="false"></div>'
+var LIKE_BOX_TEMPLATE = '<div class="fb-like-box" data-href="http://www.facebook.com/{{id}}" data-width="{{width}}" data-height="{{height}}" data-show-faces="true" data-stream="false" data-header="false"></div>';
+
+var defaults = {
+	limit: 3,
+	width: 400,
+	height: 600,
+	minLikes: 0,
+	showFaces: true,
+	showStream: true,
+	showHeader: false,
+	ids: []
+};
+
+function createPages(collage, options){
+	utils.extend(options, defaults);
+	var ids = options.ids;
+	var gatherIds = Q.when(ids);
+	
+	if(options.query){
+		return getFromApi(endpoint, [
+			'type=page',
+			'fields=name,link,likes,category',
+			'limit=' + options.limit,
+			'q=' + encodeURIComponent(options.query)
+		]).then(function(response){
+			response.data.forEach(function(item){
+				if(item.likes < options.minLikes) return;
+				ids.push(item.id);
+			});
+
+			return loadLikeBoxes(collage, ids, options);
+		});
+	} else {
+		return Q.when(loadLikeBoxes(collage, ids, options));
+	}
+};
+
+function loadLikeBoxes(collage, ids, options){
+	var elements = [];
+
+	ids.forEach(function(id){
+		var element = document.createElement("div");
+		element.className="fb-like-box";
+		element.setAttribute("data-href", "http://www.facebook.com/" + id);
+		element.setAttribute("data-width", options.width);
+		element.setAttribute("data-height", options.height);
+		element.setAttribute("data-show-faces", options.showFaces);
+		element.setAttribute("data-stream", options.showStream);
+		element.setAttribute("data-header", options.showHeader);
+
+		var iframeElement = utils.attachIframeToCollage(collage, element, options.width, options.height);
+		
+		FB.XFBML.parse(iframeElement);
+
+		elements.push(new IframeElement(iframeElement));
+	});
+	
+	return elements;
+}
+
+;return module.exports;}({},{});
+var __m18 = function(module,exports){module.exports=exports;
+var Q = __m8,
+	IframeElement = __m20,
+	utils = __m3;
+
+module.exports = function(collage, options){
+	var width = options.width || 500,
+		height = options.height || 500;
+
+	var iframe = document.createElement("iframe");
+	iframe.src = options.url;
+
+	var element = utils.attachIframeToCollage(collage, iframe, width, height);
+
+	return Q.when(new IframeElement(element));
+};
+
+;return module.exports;}({},{});
+var __m19 = function(module,exports){module.exports=exports;
+var Q = __m8,
+	SimpleElement = __m21,
+	utils = __m3,
+	getFromApi = __m23;
+
+var endpoint = "http://www.reddit.com/search.json";
+
+module.exports = getPhotos;
+
+var defaults = {
+	limit: "20",
+	restrict_sr: "false",
+	sort: "top",
+	time: "all",
+	nsfw: "false",
+	minComments: 0,
+	minScore: 0
+};
+
+function getPhotos(collage, options){
+	var deferred = Q.defer(),
+		params;
+	
+	if(typeof options === "string") options = {tags: options};
+	utils.extend(options, defaults);
+
+	params = [
+		"limit=" + options.limit,
+		"restrict_sr=" + options.restrict_sr, 
+		"sort=" + options.sort,
+		"t=" + options.time,
+		"q=" + options.query
+	];
+	
+	getFromApi(endpoint, "jsonp", params).then(function(response){
+		var elements = [],
+			photos = response.data && response.data.children || [],
+			waiting;
+
+		photos = photos.filter(function(item){
+			item = item.data;
+
+			if(	item.score < options.minScore || 
+				item.num_comments < options.minComments ||
+				(!~item.url.indexOf(".jpg"))){
+				return false;	
+			}
+
+			return true;
+		});
+
+		waiting = photos.length;
+		photos.forEach(function(item){
+			item = item.data;
+
+			loadImage(item.url).then(function(element){
+				var anchor = document.createElement("a");
+				anchor.href = "http://www.reddit.com" + item.permalink;
+				anchor.width = element.width;
+				anchor.height = element.height;
+				anchor.target = "_blank";
+				anchor.style.display = "block";
+				anchor.appendChild(element);
+				
+				elements.push(SimpleElement.create(anchor));
+
+				if(--waiting === 0) deferred.resolve(elements);
+			}, function(){
+				if(--waiting === 0) deferred.resolve(elements);
+			});
+		});
+	});
+
+	return deferred.promise;
+};
+
+var documentFragment = document.createDocumentFragment();
+function loadImage(src){
+	var	deferred = Q.defer(),
+		img = new Image();
+	
+	img.src = src;
+
+	img.onload = function(){
+		// This forces FF to set the width/height
+		documentFragment.appendChild(img);
+		deferred.resolve(img);
+	};
+
+	img.onerror = deferred.reject.bind(deferred);
+
+	return deferred.promise;
+};
+;return module.exports;}({},{});
+var __m6 = function(module,exports){module.exports=exports;
+exports.flickr = __m10;
+exports.image = __m11;
+exports.youtube = __m12;
+exports.googlePlus = __m13;
+exports.googleNews = __m14;
+exports.nyTimes = __m15;
+exports.twitter = __m16;
+exports.facebook = __m17;
+exports.iframe = __m18;
+exports.reddit = __m19;
 ;return module.exports;}({},{});
 var __m2 = function(module,exports){module.exports=exports;
 ;module.exports = (function(){
@@ -6000,7 +6228,8 @@ var Surface = module.exports = function(container){
 	
 	this.horizontalVelocity = 0;
 	this.verticalVelocity = 0;
-	
+	this.noMoveSpinCount = Surface.prototype.noMoveSpinCount;
+
 	this.cssTransitions = {};
 	this.cssFilters = {};
 	this.cssTransforms = {};
@@ -6024,6 +6253,7 @@ Surface.getApi = function(surface){
 
 	api.refit = surface.refit.bind(surface);
 	api.element = surface.element;
+	api.container = surface.container;
 
 	api.css = surface.setCssStyle.bind(surface);
 	api.cssTransform = surface.setCssTransform.bind(surface);
@@ -6108,9 +6338,11 @@ Surface.prototype.refit = function(){
 Surface.prototype.startTransformLoop = function(){
 	if(this.transforming) return;
 
+	this.noMoveSpinCount = Surface.prototype.noMoveSpinCount;
 	this.transforming = true;
 	this.lastStepTime = Date.now();
 	this.animationRequestId = requestAnimationFrame(this.transformStep);
+	this.attachPointerListeners();
 	this.emitter.emit("move start");
 };
 
@@ -6122,6 +6354,7 @@ Surface.prototype.stopTransformLoop = function(){
 	this.emitter.emit("move stop");
 };
 
+Surface.prototype.noMoveSpinCount = 10;
 Surface.prototype.transformStep = function(){
 	var currentTime = Date.now(),
 		lagScalar = (currentTime - this.lastStepTime) / this.msPerStep;
@@ -6130,10 +6363,6 @@ Surface.prototype.transformStep = function(){
 	this.lastVerticalDisplacement = lagScalar * (this.baseVerticalVelocity + (this.verticalVelocity * this.verticalVelocityScalar));
 	this.lastStepTime = currentTime;
 	
-	if(!(this.horizontalVelocityScalar || this.verticalVelocityScalar) && this.trackingPointer){
-		this.detachPointerListeners();	
-	}
-
 	if(this.lastHorizontalDisplacement || this.lastVerticalDisplacement){
 		this.horizontalPosition += this.lastHorizontalDisplacement;
 		this.verticalPosition += this.lastVerticalDisplacement;
@@ -6141,9 +6370,6 @@ Surface.prototype.transformStep = function(){
 		this.animationRequestId = requestAnimationFrame(this.transformStep);
 	} else if(this.trackingPointer || this.baseHorizontalVelocity || this.baseVerticalVelocity){
 		this.animationRequestId = requestAnimationFrame(this.transformStep);
-	} else {
-		// If the next step won't do anything, stop the transform loop
-		this.stopTransformLoop();
 	}
 };
 
@@ -6159,8 +6385,6 @@ Surface.prototype.setBaseHorizontalVelocity = function(target, duration, easingF
 	} else {
 		this.baseHorizontalVelocity = target;
 	}
-
-	if(!this.transforming && target) this.startTransformLoop();
 };
 
 Surface.prototype.setBaseVerticalVelocity = function(target, duration, easingFunc){
@@ -6175,8 +6399,6 @@ Surface.prototype.setBaseVerticalVelocity = function(target, duration, easingFun
 	} else {
 		this.baseVerticalVelocity = target;
 	}
-
-	if(!this.transforming && target) this.startTransformLoop();
 };
 
 Surface.prototype.setVelocityScalar = function(target, duration, easingFunc, callback){
@@ -6204,11 +6426,6 @@ Surface.prototype.setHorizontalVelocityScalar = function(target, duration, easin
 	} else {
 		this.horizontalVelocityScalar = target;
 	}
-
-	if(target !== 0){
-		if(!this.transforming) this.startTransformLoop();
-		if(!this.trackingPointer) this.attachPointerListeners();
-	}
 };
 
 Surface.prototype.setVerticalVelocityScalar = function(target, duration, easingFunc, callback){
@@ -6223,12 +6440,11 @@ Surface.prototype.setVerticalVelocityScalar = function(target, duration, easingF
 	} else {
 		this.verticalVelocityScalar = target;
 	}
-
-	if(target !== 0){
-		if(!this.transforming) this.startTransformLoop();
-		if(!this.trackingPointer) this.attachPointerListeners();
-	}
 };
+
+function preventDefault(e){
+	e.preventDefault();
+}
 
 Surface.prototype.attachPointerListeners = function(){
 	if(this.trackingPointer) return;
@@ -6236,11 +6452,11 @@ Surface.prototype.attachPointerListeners = function(){
 
 	if(isTouchDevice){
 		Hammer(this.container).on("drag", this.dragEventHandler);	
+		this.container.addEventListener("touchmove", preventDefault);
 	} else {
 		this.container.addEventListener("mousemove", this.pointerEventHandler);
 	}
 	
-
 	this.emitter.emit("pointer tracking start");
 };
 
@@ -6250,6 +6466,7 @@ Surface.prototype.detachPointerListeners = function(){
 	
 	if(isTouchDevice){
 		Hammer(this.container).off("drag", this.dragEventHandler);	
+		this.container.removeEventListener("touchmove", preventDefault);
 	} else {
 		this.container.removeEventListener("mousemove", this.pointerEventHandler);
 	}
@@ -6261,6 +6478,9 @@ Surface.prototype.detachPointerListeners = function(){
 Surface.prototype.dragEventHandler = function(e){
 	this.horizontalVelocity = e.gesture.velocityX;
 	this.verticalVelocity = e.gesture.velocityY;
+	
+	if(this.horizontalVelocity < 0.1) this.horizontalVelocity = 0;
+	if(this.verticalVelocity < 0.1) this.verticalVelocity = 0;
 
 	if(this.horizontalVelocity > 1) this.horizontalVelocity = 1;
 	if(this.verticalVelocity > 1) this.verticalVelocity = 1;
@@ -6932,13 +7152,14 @@ Quadtree.prototype.prune = function(left, top, width, height){
 ;return module.exports;}({},{});return __m0;}());
 ;return module.exports;}({},{});
 var __m0 = function(module,exports){module.exports=exports;
-var Q = __m7;
+var Q = __m8;
 var createQuadtree = __m1.create,
 	Surface = __m2;
-	//Surface = __m8;
+	//Surface = __m9;
 
-var BoundingBox = __m3,
-	Tag = __m4;
+var utils = __m3;
+var BoundingBox = __m4,
+	Tag = __m5;
 
 var Collage = module.exports = function(container){
 	Surface.call(this, container);
@@ -6948,6 +7169,8 @@ var Collage = module.exports = function(container){
 	this.activeTags = [];
 
 	this.updateCanvasDimensions();
+
+	var self = this;
 	window.c = this;
 }
 Collage.prototype = Object.create(Surface.prototype);
@@ -6965,6 +7188,9 @@ Collage.getApi = function(collage){
 	
 	api.setActiveTags = collage.setActiveTags.bind(collage);
 	
+	api.pause = collage.pause.bind(collage);
+	api.resume = collage.resume.bind(collage);
+
 	api.load = collage.loadElements.bind(collage);
 	api.add = collage.addElements.bind(collage);
 	api.remove = collage.removeElement.bind(collage);
@@ -6972,13 +7198,24 @@ Collage.getApi = function(collage){
 	api.showElement = collage.showElement.bind(collage);
 	api.loader = collage.loader;
 
+	api.fill = function(){
+		collage.updateCanvasDimensions();
+		collage.pickNextElement();
+
+		if(collage.nextElement){
+			return collage.fillCenter();	
+		}
+
+		return [];
+	};
+
 	api.start = collage.start.bind(collage);
 	
 	return api;
 };
 
-Collage.loader = __m5;
-Collage.element = __m6;
+Collage.loader = __m6;
+Collage.element = __m7;
 
 // How many random spot will be checked to place elements per frame
 Collage.prototype.scanTryLimit = 20;
@@ -7039,7 +7276,7 @@ Collage.prototype.loadElements = function(tagNames, arg2, arg3){
 			loaderConfigIndex = loaderConfigs.length;
 
 			while(loaderConfig = loaderConfigs[--loaderConfigIndex]){
-				promise = loader(loaderConfig).then(addElements);
+				promise = loader(this, loaderConfig).then(addElements);
 				promises.push(promise);	
 			}
 		}
@@ -7064,6 +7301,8 @@ Collage.prototype.addElements = function(tagNames, elements){
 		while(elementIndex--) tag.add(elements[elementIndex]);
 	}
 };
+
+Collage.prototype.fadeInToCenter = function(){};
 
 Collage.prototype.removeElement = function(tagNames, element){
 	if(!Array.isArray(tagNames)) tagNames = [tagNames];
@@ -7125,6 +7364,24 @@ Collage.prototype.getRandomActiveTag = function(){
 	return tag;
 };
 
+Collage.prototype.pause = function(duration){
+	if(this.savedHorizontalVelocityScalar !== void 0) return;
+	this.savedHorizontalVelocityScalar = this.horizontalVelocityScalar;
+	this.savedVerticalVelocityScalar = this.verticalVelocityScalar;
+	this.setVelocityScalar(0, duration || 0.4);
+};
+
+Collage.prototype.resume = function(duration){
+	if(this.savedHorizontalVelocityScalar === void 0) return;
+
+	this.setHorizontalVelocityScalar(this.savedHorizontalVelocityScalar, (duration || 0.4));
+	this.setVerticalVelocityScalar(this.savedVerticalVelocityScalar, (duration || 0.4));
+	this.savedHorizontalVelocityScalar = void 0;
+};
+
+Collage.prototype.savedHorizontalVelocityScalar = void 0;
+Collage.prototype.savedVerticalVelocityScalar = void 0;
+
 Collage.prototype.getRandomActiveTagFailSafe = 20;
 Collage.prototype.getRandomElementFailSafe = 20;
 Collage.prototype.getRandomElementTryLimit = 20;
@@ -7173,7 +7430,7 @@ Collage.prototype.start = function(){
 	if(this.activeTags.length === 0){
 		throw new Error("Unable to start without active tags");
 	};
-	
+	this.startTransformLoop();
 	this.updateCanvasDimensions();
 	this.pickNextElement();
 
@@ -7268,7 +7525,6 @@ Collage.prototype.updateCanvasDimensions = function(){
 };
 
 Collage.prototype.fillCenter = function(){
-
 	var boxes = this.quadtree.getObjects(
 		this.viewportLeft - this.checkWidth,
 		this.viewportTop - this.checkHeight,
@@ -7276,7 +7532,8 @@ Collage.prototype.fillCenter = function(){
 		this.viewportHeight + this.checkHeight * 2
 	);
 
-	var	scanCheckLeft,
+	var	boundingBoxes = [],
+		scanCheckLeft,
 		scanCheckTop,
 		scanCheckRight,
 		scanCheckBottom,
@@ -7301,7 +7558,7 @@ Collage.prototype.fillCenter = function(){
 		scanCheckBottom = scanCheckTop + this.checkHeight;
 	
 		if(!hasCollision(boxes, scanCheckLeft, scanCheckTop, scanCheckRight, scanCheckBottom)){
-			this.insertNextElement(scanCheckLeft + this.elementMargin, scanCheckTop + this.elementMargin);
+			boundingBoxes.push(this.insertNextElement(scanCheckLeft + this.elementMargin, scanCheckTop + this.elementMargin));
 			if(!this.nextElement) break;
 
 			missCount = 0;
@@ -7315,6 +7572,7 @@ Collage.prototype.fillCenter = function(){
 	}
 
 	this.updateElementVisibility();
+	return boundingBoxes;
 };
 
 Collage.prototype.updateBounds = function(){

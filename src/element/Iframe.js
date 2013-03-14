@@ -7,16 +7,17 @@ var isiOS = (navigator.userAgent.match(/(iPad|iPhone|iPod)/g) ? true : false );
 
 function IframeElement (element){
 	Element.call(this, element, parseInt(element.width), parseInt(element.height));
-	this.iframe = iframe = this.element.querySelector('iframe') || this.element;
 
+	this.iframe = this.element.querySelector('iframe') || this.element;
+	this.isLocal = this.iframe.contentDocument && this.iframe.contentDocument.body && this.iframe.contentDocument.body.innerHTML !== "";
+	
 	// Hack to fix for iOS's failure to render the inside of a iframe 
 	// when using css transforms. If we have permission to edit the iframe,
 	// this method is much more performant that the hack in .show
-	if(isiOS && this.iframe.contentDocument.body.innerHTML !== ""){
-		this.isLocal = true;
+	if(isiOS && this.isLocal){
 		this.iframe.contentDocument.body.style.webkitTransform = "translate3d(0, 0, 0)";
 	}
-		
+
 	this.hide();
 };
 IframeElement.prototype = Object.create(Element.prototype);

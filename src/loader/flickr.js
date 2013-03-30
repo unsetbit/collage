@@ -3,9 +3,11 @@ var Q = require('q/q.js'),
 	utils = require("../utils.js"),
 	getFromApi = require('./getFromCommonApi.js');
 
-http://api.flickr.com/services/rest/?method=flickr.photos.search&api_key=06960d3c3c8affd01e65ec032513557b&license=1,2,3,4,5,6,7,8&sort=relevance&extras=url_z,url_m,path_alias&per_page=20&content_type=1&media=photos&format=json&tags=
+window.credits = window.credits || {};
+var credits = window.credits.flickr = {};
 
-var endpoint = "http://api.flickr.com/services/rest/";
+//var endpoint = "http://api.flickr.com/services/rest/";
+var endpoint = "/services/rest/";
 
 module.exports = getPhotos;
 
@@ -66,6 +68,8 @@ function getPhotos(collage, options){
 				anchor.target = "_blank";
 				anchor.style.display = "block";
 				anchor.appendChild(element);
+				
+				credits[item.pathalias] = anchor.href;
 				
 				elements.push(SimpleElement.create(anchor));
 				if(--waiting === 0) deferred.resolve(elements);

@@ -6,6 +6,9 @@ var mustache = require("mustache/mustache.js");
 var getFromApi = require('./getFromCommonApi.js');
 var SimpleElement = require("../element/Simple.js");
 	
+window.credits = window.credits || {};
+var credits = window.credits.googleNews = {};
+
 module.exports = function(collage, query){
 	return search(query);
 };
@@ -29,7 +32,8 @@ var ARTICLE_TEMPLATE = '' +
 var documentFragment = document.createDocumentFragment();
 
 var search = (function(){
-	var endpoint = "https://ajax.googleapis.com/ajax/services/search/news";
+	//var endpoint = "https://ajax.googleapis.com/ajax/services/search/news";
+	var endpoint = "/ajax/services/search/news";
 
 	return function(query){
 		var params = [
@@ -41,6 +45,8 @@ var search = (function(){
 		return getFromApi(endpoint, params).then(function(response){
 			var elements = [];
 			response.responseData.results.forEach(function(item){
+				credits[item.publisher] = item.unescapedUrl;
+
 				var templateParams = {
 					title: item.titleNoFormatting,
 					sourceUrl: item.unescapedUrl,

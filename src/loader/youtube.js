@@ -5,6 +5,9 @@ var VideoElement = require('../element/Video.js');
 var getFromApi = require('./getFromCommonApi.js');
 var TIMEOUT = 10 * 1000;
 
+window.credits = window.credits || {};
+var credits = window.credits.youtube = {};
+
 module.exports = function(collage, options){
 	if(options.query){
 		return queryVideos(options).then(function(videoIds){
@@ -30,13 +33,14 @@ var defaults = {
 };
 
 var queryVideos = (function(){
-	var endpoint = "https://www.googleapis.com/youtube/v3/search";
+	//var endpoint = "https://www.googleapis.com/youtube/v3/search";
+	var endpoint = "https://d3ggoqbhpexke2.cloudfront.net/youtube/v3/search";
 
 	return function(options){
 		utils.extend(options, defaults);
 
 		var params = [
-				"part=id",
+				"part=id,snippet",
 				"videoDuration=" + options.duration,
 				"type=video",
 				"videoEmbeddable=true",
@@ -47,7 +51,9 @@ var queryVideos = (function(){
 		
 		return getFromApi(endpoint, params).then(function(response){
 			var videoIds = [];
+
 			response.items.forEach(function(item){
+				credits[item.snippet.channelTitle] = "http://youtube.com/" + item.snippet.channelTitle;
 				videoIds.push(item.id.videoId);
 			});
 

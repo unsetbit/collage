@@ -1,5 +1,321 @@
 ;module.exports = (function(){
 var __m26 = function(module,exports){module.exports=exports;
+/**
+ * EventEmitter v4.0.5 - git.io/ee
+ * Oliver Caldwell
+ * MIT license
+ * @preserve
+ */
+
+;(function(exports) {
+    // JSHint config - http://www.jshint.com/
+    /*jshint laxcomma:true*/
+    /*global define:true*/
+
+    // Place the script in strict mode
+    'use strict';
+
+    /**
+     * Class for managing events.
+     * Can be extended to provide event functionality in other classes.
+     *
+     * @class Manages event registering and emitting.
+     */
+    function EventEmitter(){}
+
+    // Shortcuts to improve speed and size
+
+        // Easy access to the prototype
+    var proto = EventEmitter.prototype
+
+      // Existence of a native indexOf
+      , nativeIndexOf = Array.prototype.indexOf ? true : false;
+
+    /**
+     * Finds the index of the listener for the event in it's storage array
+     *
+     * @param {Function} listener Method to look for.
+     * @param {Function[]} listeners Array of listeners to search through.
+     * @return {Number} Index of the specified listener, -1 if not found
+     */
+    function indexOfListener(listener, listeners) {
+        // Return the index via the native method if possible
+        if(nativeIndexOf) {
+            return listeners.indexOf(listener);
+        }
+
+        // There is no native method
+        // Use a manual loop to find the index
+        var i = listeners.length;
+        while(i--) {
+            // If the listener matches, return it's index
+            if(listeners[i] === listener) {
+                return i;
+            }
+        }
+
+        // Default to returning -1
+        return -1;
+    }
+
+    /**
+     * Fetches the events object and creates one if required.
+     *
+     * @return {Object} The events storage object.
+     */
+    proto._getEvents = function() {
+        return this._events || (this._events = {});
+    };
+
+    /**
+     * Returns the listener array for the specified event.
+     * Will initialise the event object and listener arrays if required.
+     *
+     * @param {String} evt Name of the event to return the listeners from.
+     * @return {Function[]} All listener functions for the event.
+     * @doc
+     */
+    proto.getListeners = function(evt) {
+        // Create a shortcut to the storage object
+        // Initialise it if it does not exists yet
+        var events = this._getEvents();
+
+        // Return the listener array
+        // Initialise it if it does not exist
+        return events[evt] || (events[evt] = []);
+    };
+
+    /**
+     * Adds a listener function to the specified event.
+     * The listener will not be added if it is a duplicate.
+     * If the listener returns true then it will be removed after it is called.
+     *
+     * @param {String} evt Name of the event to attach the listener to.
+     * @param {Function} listener Method to be called when the event is emitted. If the function returns true then it will be removed after calling.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     * @doc
+     */
+    proto.addListener = function(evt, listener) {
+        // Fetch the listeners
+        var listeners = this.getListeners(evt);
+
+        // Push the listener into the array if it is not already there
+        if(indexOfListener(listener, listeners) === -1) {
+            listeners.push(listener);
+        }
+
+        // Return the instance of EventEmitter to allow chaining
+        return this;
+    };
+
+    /**
+     * Alias of addListener
+     * @doc
+     */
+    proto.on = proto.addListener;
+
+    /**
+     * Removes a listener function from the specified event.
+     *
+     * @param {String} evt Name of the event to remove the listener from.
+     * @param {Function} listener Method to remove from the event.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     * @doc
+     */
+    proto.removeListener = function(evt, listener) {
+        // Fetch the listeners
+        // And get the index of the listener in the array
+        var listeners = this.getListeners(evt)
+          , index = indexOfListener(listener, listeners);
+
+        // If the listener was found then remove it
+        if(index !== -1) {
+            listeners.splice(index, 1);
+
+            // If there are no more listeners in this array then remove it
+            if(listeners.length === 0) {
+                this.removeEvent(evt);
+            }
+        }
+
+        // Return the instance of EventEmitter to allow chaining
+        return this;
+    };
+
+    /**
+     * Alias of removeListener
+     * @doc
+     */
+    proto.off = proto.removeListener;
+
+    /**
+     * Adds listeners in bulk using the manipulateListeners method.
+     * If you pass an object as the second argument you can add to multiple events at once. The object should contain key value pairs of events and listeners or listener arrays.
+     * You can also pass it an event name and an array of listeners to be added.
+     *
+     * @param {String|Object} evt An event name if you will pass an array of listeners next. An object if you wish to add to multiple events at once.
+     * @param {Function[]} [listeners] An optional array of listener functions to add.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     * @doc
+     */
+    proto.addListeners = function(evt, listeners) {
+        // Pass through to manipulateListeners
+        return this.manipulateListeners(false, evt, listeners);
+    };
+
+    /**
+     * Removes listeners in bulk using the manipulateListeners method.
+     * If you pass an object as the second argument you can remove from multiple events at once. The object should contain key value pairs of events and listeners or listener arrays.
+     * You can also pass it an event name and an array of listeners to be removed.
+     *
+     * @param {String|Object} evt An event name if you will pass an array of listeners next. An object if you wish to remove from multiple events at once.
+     * @param {Function[]} [listeners] An optional array of listener functions to remove.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     * @doc
+     */
+    proto.removeListeners = function(evt, listeners) {
+        // Pass through to manipulateListeners
+        return this.manipulateListeners(true, evt, listeners);
+    };
+
+    /**
+     * Edits listeners in bulk. The addListeners and removeListeners methods both use this to do their job. You should really use those instead, this is a little lower level.
+     * The first argument will determine if the listeners are removed (true) or added (false).
+     * If you pass an object as the second argument you can add/remove from multiple events at once. The object should contain key value pairs of events and listeners or listener arrays.
+     * You can also pass it an event name and an array of listeners to be added/removed.
+     *
+     * @param {Boolean} remove True if you want to remove listeners, false if you want to add.
+     * @param {String|Object} evt An event name if you will pass an array of listeners next. An object if you wish to add/remove from multiple events at once.
+     * @param {Function[]} [listeners] An optional array of listener functions to add/remove.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     * @doc
+     */
+    proto.manipulateListeners = function(remove, evt, listeners) {
+        // Initialise any required variables
+        var i
+          , value
+          , single = remove ? this.removeListener : this.addListener
+          , multiple = remove ? this.removeListeners : this.addListeners;
+
+        // If evt is an object then pass each of it's properties to this method
+        if(typeof evt === 'object') {
+            for(i in evt) {
+                if(evt.hasOwnProperty(i) && (value = evt[i])) {
+                    // Pass the single listener straight through to the singular method
+                    if(typeof value === 'function') {
+                        single.call(this, i, value);
+                    }
+                    else {
+                        // Otherwise pass back to the multiple function
+                        multiple.call(this, i, value);
+                    }
+                }
+            }
+        }
+        else {
+            // So evt must be a string
+            // And listeners must be an array of listeners
+            // Loop over it and pass each one to the multiple method
+            i = listeners.length;
+            while(i--) {
+                single.call(this, evt, listeners[i]);
+            }
+        }
+
+        // Return the instance of EventEmitter to allow chaining
+        return this;
+    };
+
+    /**
+     * Removes all listeners from a specified event.
+     * If you do not specify an event then all listeners will be removed.
+     * That means every event will be emptied.
+     *
+     * @param {String} [evt] Optional name of the event to remove all listeners for. Will remove from every event if not passed.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     * @doc
+     */
+    proto.removeEvent = function(evt) {
+        // Remove different things depending on the state of evt
+        if(evt) {
+            // Remove all listeners for the specified event
+            delete this._getEvents()[evt];
+        }
+        else {
+            // Remove all listeners in all events
+            delete this._events;
+        }
+
+        // Return the instance of EventEmitter to allow chaining
+        return this;
+    };
+
+    /**
+     * Emits an event of your choice.
+     * When emitted, every listener attached to that event will be executed.
+     * If you pass the optional argument array then those arguments will be passed to every listener upon execution.
+     * Because it uses `apply`, your array of arguments will be passed as if you wrote them out separately.
+     * So they will not arrive within the array on the other side, they will be separate.
+     *
+     * @param {String} evt Name of the event to emit and execute listeners for.
+     * @param {Array} [args] Optional array of arguments to be passed to each listener.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     * @doc
+     */
+    proto.emitEvent = function(evt, args) {
+        // Get the listeners for the event
+        // Also initialise any other required variables
+        var listeners = this.getListeners(evt)
+          , i = listeners.length
+          , response;
+
+        // Loop over all listeners assigned to the event
+        // Apply the arguments array to each listener function
+        while(i--) {
+            // If the listener returns true then it shall be removed from the event
+            // The function is executed either with a basic call or an apply if there is an args array
+            response = args ? listeners[i].apply(null, args) : listeners[i]();
+            if(response === true) {
+                this.removeListener(evt, listeners[i]);
+            }
+        }
+
+        // Return the instance of EventEmitter to allow chaining
+        return this;
+    };
+
+    /**
+     * Alias of emitEvent
+     * @doc
+     */
+    proto.trigger = proto.emitEvent;
+
+    /**
+     * Subtly different from emitEvent in that it will pass its arguments on to the listeners, as
+     * opposed to taking a single array of arguments to pass on.
+     *
+     * @param {String} evt Name of the event to emit and execute listeners for.
+     * @param {...*} Optional additional arguments to be passed to each listener.
+     * @return {Object} Current instance of EventEmitter for chaining.
+     * @doc
+     */
+    proto.emit = function(evt) {
+        var args = Array.prototype.slice.call(arguments, 1);
+        return this.emitEvent(evt, args);
+    };
+
+    // Expose the class either via AMD or the global object
+    if(typeof define === 'function' && define.amd) {
+        define(function() {
+            return EventEmitter;
+        });
+    }
+    else {
+        exports.EventEmitter = EventEmitter;
+    }
+}(this));
+;return module.exports;}({},{});
+var __m25 = function(module,exports){module.exports=exports;
 /*!
  * mustache.js - Logic-less {{mustache}} templates with JavaScript
  * http://github.com/janl/mustache.js
@@ -612,322 +928,6 @@ var __m26 = function(module,exports){module.exports=exports;
 }())));
 
 ;return module.exports;}({},{});
-var __m25 = function(module,exports){module.exports=exports;
-/**
- * EventEmitter v4.0.5 - git.io/ee
- * Oliver Caldwell
- * MIT license
- * @preserve
- */
-
-;(function(exports) {
-    // JSHint config - http://www.jshint.com/
-    /*jshint laxcomma:true*/
-    /*global define:true*/
-
-    // Place the script in strict mode
-    'use strict';
-
-    /**
-     * Class for managing events.
-     * Can be extended to provide event functionality in other classes.
-     *
-     * @class Manages event registering and emitting.
-     */
-    function EventEmitter(){}
-
-    // Shortcuts to improve speed and size
-
-        // Easy access to the prototype
-    var proto = EventEmitter.prototype
-
-      // Existence of a native indexOf
-      , nativeIndexOf = Array.prototype.indexOf ? true : false;
-
-    /**
-     * Finds the index of the listener for the event in it's storage array
-     *
-     * @param {Function} listener Method to look for.
-     * @param {Function[]} listeners Array of listeners to search through.
-     * @return {Number} Index of the specified listener, -1 if not found
-     */
-    function indexOfListener(listener, listeners) {
-        // Return the index via the native method if possible
-        if(nativeIndexOf) {
-            return listeners.indexOf(listener);
-        }
-
-        // There is no native method
-        // Use a manual loop to find the index
-        var i = listeners.length;
-        while(i--) {
-            // If the listener matches, return it's index
-            if(listeners[i] === listener) {
-                return i;
-            }
-        }
-
-        // Default to returning -1
-        return -1;
-    }
-
-    /**
-     * Fetches the events object and creates one if required.
-     *
-     * @return {Object} The events storage object.
-     */
-    proto._getEvents = function() {
-        return this._events || (this._events = {});
-    };
-
-    /**
-     * Returns the listener array for the specified event.
-     * Will initialise the event object and listener arrays if required.
-     *
-     * @param {String} evt Name of the event to return the listeners from.
-     * @return {Function[]} All listener functions for the event.
-     * @doc
-     */
-    proto.getListeners = function(evt) {
-        // Create a shortcut to the storage object
-        // Initialise it if it does not exists yet
-        var events = this._getEvents();
-
-        // Return the listener array
-        // Initialise it if it does not exist
-        return events[evt] || (events[evt] = []);
-    };
-
-    /**
-     * Adds a listener function to the specified event.
-     * The listener will not be added if it is a duplicate.
-     * If the listener returns true then it will be removed after it is called.
-     *
-     * @param {String} evt Name of the event to attach the listener to.
-     * @param {Function} listener Method to be called when the event is emitted. If the function returns true then it will be removed after calling.
-     * @return {Object} Current instance of EventEmitter for chaining.
-     * @doc
-     */
-    proto.addListener = function(evt, listener) {
-        // Fetch the listeners
-        var listeners = this.getListeners(evt);
-
-        // Push the listener into the array if it is not already there
-        if(indexOfListener(listener, listeners) === -1) {
-            listeners.push(listener);
-        }
-
-        // Return the instance of EventEmitter to allow chaining
-        return this;
-    };
-
-    /**
-     * Alias of addListener
-     * @doc
-     */
-    proto.on = proto.addListener;
-
-    /**
-     * Removes a listener function from the specified event.
-     *
-     * @param {String} evt Name of the event to remove the listener from.
-     * @param {Function} listener Method to remove from the event.
-     * @return {Object} Current instance of EventEmitter for chaining.
-     * @doc
-     */
-    proto.removeListener = function(evt, listener) {
-        // Fetch the listeners
-        // And get the index of the listener in the array
-        var listeners = this.getListeners(evt)
-          , index = indexOfListener(listener, listeners);
-
-        // If the listener was found then remove it
-        if(index !== -1) {
-            listeners.splice(index, 1);
-
-            // If there are no more listeners in this array then remove it
-            if(listeners.length === 0) {
-                this.removeEvent(evt);
-            }
-        }
-
-        // Return the instance of EventEmitter to allow chaining
-        return this;
-    };
-
-    /**
-     * Alias of removeListener
-     * @doc
-     */
-    proto.off = proto.removeListener;
-
-    /**
-     * Adds listeners in bulk using the manipulateListeners method.
-     * If you pass an object as the second argument you can add to multiple events at once. The object should contain key value pairs of events and listeners or listener arrays.
-     * You can also pass it an event name and an array of listeners to be added.
-     *
-     * @param {String|Object} evt An event name if you will pass an array of listeners next. An object if you wish to add to multiple events at once.
-     * @param {Function[]} [listeners] An optional array of listener functions to add.
-     * @return {Object} Current instance of EventEmitter for chaining.
-     * @doc
-     */
-    proto.addListeners = function(evt, listeners) {
-        // Pass through to manipulateListeners
-        return this.manipulateListeners(false, evt, listeners);
-    };
-
-    /**
-     * Removes listeners in bulk using the manipulateListeners method.
-     * If you pass an object as the second argument you can remove from multiple events at once. The object should contain key value pairs of events and listeners or listener arrays.
-     * You can also pass it an event name and an array of listeners to be removed.
-     *
-     * @param {String|Object} evt An event name if you will pass an array of listeners next. An object if you wish to remove from multiple events at once.
-     * @param {Function[]} [listeners] An optional array of listener functions to remove.
-     * @return {Object} Current instance of EventEmitter for chaining.
-     * @doc
-     */
-    proto.removeListeners = function(evt, listeners) {
-        // Pass through to manipulateListeners
-        return this.manipulateListeners(true, evt, listeners);
-    };
-
-    /**
-     * Edits listeners in bulk. The addListeners and removeListeners methods both use this to do their job. You should really use those instead, this is a little lower level.
-     * The first argument will determine if the listeners are removed (true) or added (false).
-     * If you pass an object as the second argument you can add/remove from multiple events at once. The object should contain key value pairs of events and listeners or listener arrays.
-     * You can also pass it an event name and an array of listeners to be added/removed.
-     *
-     * @param {Boolean} remove True if you want to remove listeners, false if you want to add.
-     * @param {String|Object} evt An event name if you will pass an array of listeners next. An object if you wish to add/remove from multiple events at once.
-     * @param {Function[]} [listeners] An optional array of listener functions to add/remove.
-     * @return {Object} Current instance of EventEmitter for chaining.
-     * @doc
-     */
-    proto.manipulateListeners = function(remove, evt, listeners) {
-        // Initialise any required variables
-        var i
-          , value
-          , single = remove ? this.removeListener : this.addListener
-          , multiple = remove ? this.removeListeners : this.addListeners;
-
-        // If evt is an object then pass each of it's properties to this method
-        if(typeof evt === 'object') {
-            for(i in evt) {
-                if(evt.hasOwnProperty(i) && (value = evt[i])) {
-                    // Pass the single listener straight through to the singular method
-                    if(typeof value === 'function') {
-                        single.call(this, i, value);
-                    }
-                    else {
-                        // Otherwise pass back to the multiple function
-                        multiple.call(this, i, value);
-                    }
-                }
-            }
-        }
-        else {
-            // So evt must be a string
-            // And listeners must be an array of listeners
-            // Loop over it and pass each one to the multiple method
-            i = listeners.length;
-            while(i--) {
-                single.call(this, evt, listeners[i]);
-            }
-        }
-
-        // Return the instance of EventEmitter to allow chaining
-        return this;
-    };
-
-    /**
-     * Removes all listeners from a specified event.
-     * If you do not specify an event then all listeners will be removed.
-     * That means every event will be emptied.
-     *
-     * @param {String} [evt] Optional name of the event to remove all listeners for. Will remove from every event if not passed.
-     * @return {Object} Current instance of EventEmitter for chaining.
-     * @doc
-     */
-    proto.removeEvent = function(evt) {
-        // Remove different things depending on the state of evt
-        if(evt) {
-            // Remove all listeners for the specified event
-            delete this._getEvents()[evt];
-        }
-        else {
-            // Remove all listeners in all events
-            delete this._events;
-        }
-
-        // Return the instance of EventEmitter to allow chaining
-        return this;
-    };
-
-    /**
-     * Emits an event of your choice.
-     * When emitted, every listener attached to that event will be executed.
-     * If you pass the optional argument array then those arguments will be passed to every listener upon execution.
-     * Because it uses `apply`, your array of arguments will be passed as if you wrote them out separately.
-     * So they will not arrive within the array on the other side, they will be separate.
-     *
-     * @param {String} evt Name of the event to emit and execute listeners for.
-     * @param {Array} [args] Optional array of arguments to be passed to each listener.
-     * @return {Object} Current instance of EventEmitter for chaining.
-     * @doc
-     */
-    proto.emitEvent = function(evt, args) {
-        // Get the listeners for the event
-        // Also initialise any other required variables
-        var listeners = this.getListeners(evt)
-          , i = listeners.length
-          , response;
-
-        // Loop over all listeners assigned to the event
-        // Apply the arguments array to each listener function
-        while(i--) {
-            // If the listener returns true then it shall be removed from the event
-            // The function is executed either with a basic call or an apply if there is an args array
-            response = args ? listeners[i].apply(null, args) : listeners[i]();
-            if(response === true) {
-                this.removeListener(evt, listeners[i]);
-            }
-        }
-
-        // Return the instance of EventEmitter to allow chaining
-        return this;
-    };
-
-    /**
-     * Alias of emitEvent
-     * @doc
-     */
-    proto.trigger = proto.emitEvent;
-
-    /**
-     * Subtly different from emitEvent in that it will pass its arguments on to the listeners, as
-     * opposed to taking a single array of arguments to pass on.
-     *
-     * @param {String} evt Name of the event to emit and execute listeners for.
-     * @param {...*} Optional additional arguments to be passed to each listener.
-     * @return {Object} Current instance of EventEmitter for chaining.
-     * @doc
-     */
-    proto.emit = function(evt) {
-        var args = Array.prototype.slice.call(arguments, 1);
-        return this.emitEvent(evt, args);
-    };
-
-    // Expose the class either via AMD or the global object
-    if(typeof define === 'function' && define.amd) {
-        define(function() {
-            return EventEmitter;
-        });
-    }
-    else {
-        exports.EventEmitter = EventEmitter;
-    }
-}(this));
-;return module.exports;}({},{});
 var __m24 = function(module,exports){module.exports=exports;
 module.exports = Element;
 
@@ -1108,7 +1108,7 @@ SimpleElement.prototype.show = function(left, top, container){
 };
 ;return module.exports;}({},{});
 var __m22 = function(module,exports){module.exports=exports;
-__m25;
+__m26;
 var Element = __m24;
 
 module.exports = VideoElement;
@@ -3300,7 +3300,10 @@ module.exports = function(collage, src){
 var __m15 = function(module,exports){module.exports=exports;
 var Q = __m8,
 	SimpleElement = __m21,
-	mustache = __m26;
+	mustache = __m25;
+
+window.credits = window.credits || {};
+var credits = window.credits.nyTimes = {};
 
 var ARTICLE_TEMPLATE = '' +
 		'<h2><a href="{{url}}">{{{title}}}</a></h2>' +
@@ -3314,16 +3317,23 @@ var ARTICLE_TEMPLATE = '' +
 
 var documentFragment = document.createDocumentFragment();
 
+var endpoint = "/svc/search/v1/article";
+//var endpoint = "http://api.nytimes.com/svc/search/v1/article";
+
 module.exports = function(collage, options){
 	return query(options);
 };
 
 function query(options){
-	return load().then(function(response){
-		return response.results.map(function(data){
+	function parseResponse(data){
+		return data.results.map(function(data){
 			element = document.createElement("div");
 			element.className = "nytimes-article";
 
+			if(data.byline){
+				credits[data.byline.replace("By ", "")] = data.url;
+			}
+			
 			var templateData = {
 				title: data.title,
 				byline: data.byline,
@@ -3347,14 +3357,29 @@ function query(options){
 			element.height = element.clientHeight;
 
 			documentFragment.appendChild(element);
-			console.log(element);
 			return new SimpleElement(element);
 		});
+	}
+
+	if(options.data){
+		return Q.when(parseResponse(options.data));
+	} else {
+
+	}
+	return load(options).then(function(response){
+		return parseResponse(response);
 	});
 }
 
 function load(options){
 	var deferred = Q.defer();
+
+	var params = [
+		"format=json",
+		"fields=publication_year,publication_month,publication_day,body,date,title,url,byline,small_image_url,small_image_height,small_image_width",
+		"api-key=af04c123c8988a12245668f5b5fa4f4c:8:67325739",
+		"query=" + options.query
+	];
 	
 	var request = new XMLHttpRequest();
 
@@ -3366,11 +3391,12 @@ function load(options){
 		deferred.reject();
 	};
 
-	request.open("get", "nytimes.json", true);
+	request.open("get", endpoint + "?" + params.join("&"), true);
 	request.send();
 
 	return deferred.promise;
 }
+
 ;return module.exports;}({},{});
 var __m23 = function(module,exports){module.exports=exports;
 var Q = __m8;
@@ -3416,13 +3442,121 @@ module.exports = (function(){
 	}
 }());
 ;return module.exports;}({},{});
+var __m13 = function(module,exports){module.exports=exports;
+var Q = __m8;
+var mustache = __m25;
+var getFromApi = __m23;
+var SimpleElement = __m21;
+	
+window.credits = window.credits || {};
+var credits = window.credits.googlePlus = {};
+
+module.exports = function(collage, query){
+	return queryActivities(query);
+};
+
+var ARTICLE_TEMPLATE = '' +
+'<div class="article-wrapper">' +
+	'<div class="post-attribution">' +
+		'<a href="{{authorUrl}}">' +
+			'{{#authorImage}}<img class="author-image" src="{{authorImage.src}}" width="{{authorImage.width}}" height="{{authorImage.height}}"/>{{/authorImage}}' +
+			'<span class="author-name">{{authorName}}</span>' +
+		'</a>' + 
+		'<span class="post-date">on Google Plus &ndash; {{date}}</span>' +
+	'</div>' +
+	'<p class="author-comments">{{{authorComments}}}</p>' + 
+	'<div class="article">' + 
+		'<a href="{{articleUrl}}">' +
+			'{{#image}}<img class="article-image" src="{{image.src}}" width="{{image.width}}" height="{{image.height}}"/>{{/image}}' + 
+			'<div class="article-attribution">' +
+				'<span>{{title}}</span>' + 
+			'</div>' + 
+		'</a>' +
+		'<p class="article-body">{{body}}</p>' +
+	'</div>' +
+'</div>';
+
+var documentFragment = document.createDocumentFragment();
+
+var queryActivities = (function(){
+	var endpoint = "https://www.googleapis.com/plus/v1/activities";
+
+	return function(query){
+		var params = [
+				"key=AIzaSyAZw0kviWeCOidthcZAYs5oCZ0k8DsOuUk",
+				"query=" + encodeURIComponent(query)
+			];
+		
+		return getFromApi(endpoint, params).then(function(response){
+			var elements = [];
+
+			response.items.forEach(function(item){
+				if(!(item && item.object && item.object.attachments && item.object.attachments.length > 0)) return;
+				var article = item.object.attachments[0];
+				if(article.objectType !== "article") return;
+
+				var actor = item.object.actor || item.actor,
+					authorComments = item.object.content;
+				if(authorComments && authorComments.length > 150){
+					authorComments = authorComments.substr(0, 150) + "&hellip;";
+				}
+
+				var templateParams = {
+					authorName: actor.displayName,
+					authorUrl: actor.url,
+					authorId: actor.id,
+					date: new Date(item.published).toLocaleDateString(),
+					authorComments: authorComments,
+					articleUrl: article.url,
+					title: article.displayName,
+					body: article.content
+				};
+								
+				if(actor.image){
+					templateParams.authorImage = {
+						src: actor.image.url,
+						width: 50,
+						height: 50
+					};
+				}
+
+				if(article.image){
+					templateParams.image = {
+						src: article.image.url,
+						width: article.image.width,
+						height: article.image.height
+					};
+				}
+				
+				var element = document.createElement("div");
+				element.className = "gplus-article";
+				element.innerHTML = mustache.render(ARTICLE_TEMPLATE, templateParams);
+				document.body.appendChild(element);
+				
+				element.width = element.clientWidth;
+				element.height = element.clientHeight;
+
+				elements.push(new SimpleElement(element));
+				documentFragment.appendChild(element);
+
+			});
+
+			return elements;
+		});
+	};
+}());
+
+;return module.exports;}({},{});
 var __m12 = function(module,exports){module.exports=exports;
-__m25;
+__m26;
 
 var Q = __m8;
 var VideoElement = __m22;
 var getFromApi = __m23;
 var TIMEOUT = 10 * 1000;
+
+window.credits = window.credits || {};
+var credits = window.credits.youtube = {};
 
 module.exports = function(collage, options){
 	if(options.query){
@@ -3449,13 +3583,14 @@ var defaults = {
 };
 
 var queryVideos = (function(){
-	var endpoint = "https://www.googleapis.com/youtube/v3/search";
+	//var endpoint = "https://www.googleapis.com/youtube/v3/search";
+	var endpoint = "https://d3ggoqbhpexke2.cloudfront.net/youtube/v3/search";
 
 	return function(options){
 		utils.extend(options, defaults);
 
 		var params = [
-				"part=id",
+				"part=id,snippet",
 				"videoDuration=" + options.duration,
 				"type=video",
 				"videoEmbeddable=true",
@@ -3466,7 +3601,9 @@ var queryVideos = (function(){
 		
 		return getFromApi(endpoint, params).then(function(response){
 			var videoIds = [];
+
 			response.items.forEach(function(item){
+				credits[item.snippet.channelTitle] = "http://youtube.com/" + item.snippet.channelTitle;
 				videoIds.push(item.id.videoId);
 			});
 
@@ -3581,117 +3718,18 @@ var loadVideo = (function(){
 }());
 
 ;return module.exports;}({},{});
-var __m13 = function(module,exports){module.exports=exports;
-var Q = __m8;
-var mustache = __m26;
-var getFromApi = __m23;
-var SimpleElement = __m21;
-	
-module.exports = function(collage, query){
-	return queryActivities(query);
-};
-
-var ARTICLE_TEMPLATE = '' +
-'<div class="article-wrapper">' +
-	'<div class="post-attribution">' +
-		'<a href="{{authorUrl}}">' +
-			'{{#authorImage}}<img class="author-image" src="{{authorImage.src}}" width="{{authorImage.width}}" height="{{authorImage.height}}"/>{{/authorImage}}' +
-			'<span class="author-name">{{authorName}}</span>' +
-		'</a>' + 
-		'<span class="post-date">on Google Plus &ndash; {{date}}</span>' +
-	'</div>' +
-	'<p class="author-comments">{{{authorComments}}}</p>' + 
-	'<div class="article">' + 
-		'<a href="{{articleUrl}}">' +
-			'{{#image}}<img class="article-image" src="{{image.src}}" width="{{image.width}}" height="{{image.height}}"/>{{/image}}' + 
-			'<div class="article-attribution">' +
-				'<span>{{title}}</span>' + 
-			'</div>' + 
-		'</a>' +
-		'<p class="article-body">{{body}}</p>' +
-	'</div>' +
-'</div>';
-
-var documentFragment = document.createDocumentFragment();
-
-var queryActivities = (function(){
-	var endpoint = "https://www.googleapis.com/plus/v1/activities";
-
-	return function(query){
-		var params = [
-				"key=AIzaSyAZw0kviWeCOidthcZAYs5oCZ0k8DsOuUk",
-				"query=" + encodeURIComponent(query)
-			];
-		
-		return getFromApi(endpoint, params).then(function(response){
-			var elements = [];
-
-			response.items.forEach(function(item){
-				if(!(item && item.object && item.object.attachments && item.object.attachments.length > 0)) return;
-				var article = item.object.attachments[0];
-				if(article.objectType !== "article") return;
-
-				var actor = item.object.actor || item.actor,
-					authorComments = item.object.content;
-				if(authorComments && authorComments.length > 150){
-					authorComments = authorComments.substr(0, 150) + "&hellip;";
-				}
-
-				var templateParams = {
-					authorName: actor.displayName,
-					authorUrl: actor.url,
-					authorId: actor.id,
-					date: new Date(item.published).toLocaleDateString(),
-					authorComments: authorComments,
-					articleUrl: article.url,
-					title: article.displayName,
-					body: article.content
-				};
-								
-				if(actor.image){
-					templateParams.authorImage = {
-						src: actor.image.url,
-						width: 50,
-						height: 50
-					};
-				}
-
-				if(article.image){
-					templateParams.image = {
-						src: article.image.url,
-						width: article.image.width,
-						height: article.image.height
-					};
-				}
-				
-				var element = document.createElement("div");
-				element.className = "gplus-article";
-				element.innerHTML = mustache.render(ARTICLE_TEMPLATE, templateParams);
-				document.body.appendChild(element);
-				
-				element.width = element.clientWidth;
-				element.height = element.clientHeight;
-
-				elements.push(new SimpleElement(element));
-				documentFragment.appendChild(element);
-
-			});
-
-			return elements;
-		});
-	};
-}());
-
-;return module.exports;}({},{});
 var __m14 = function(module,exports){module.exports=exports;
 // This one is a bit questionable since it's deprecated, and the TOS for use in
 // collages is unclear.
 
 var Q = __m8;
-var mustache = __m26;
+var mustache = __m25;
 var getFromApi = __m23;
 var SimpleElement = __m21;
 	
+window.credits = window.credits || {};
+var credits = window.credits.googleNews = {};
+
 module.exports = function(collage, query){
 	return search(query);
 };
@@ -3715,7 +3753,8 @@ var ARTICLE_TEMPLATE = '' +
 var documentFragment = document.createDocumentFragment();
 
 var search = (function(){
-	var endpoint = "https://ajax.googleapis.com/ajax/services/search/news";
+	//var endpoint = "https://ajax.googleapis.com/ajax/services/search/news";
+	var endpoint = "/ajax/services/search/news";
 
 	return function(query){
 		var params = [
@@ -3727,6 +3766,8 @@ var search = (function(){
 		return getFromApi(endpoint, params).then(function(response){
 			var elements = [];
 			response.responseData.results.forEach(function(item){
+				credits[item.publisher] = item.unescapedUrl;
+
 				var templateParams = {
 					title: item.titleNoFormatting,
 					sourceUrl: item.unescapedUrl,
@@ -3764,145 +3805,6 @@ var search = (function(){
 }());
 
 
-;return module.exports;}({},{});
-var __m16 = function(module,exports){module.exports=exports;
-// This uses an undocumented twitter api (twttr.widget.createTweet) so it might break
-
-var Q = __m8,
-	getFromApi = __m23,	
-	IframeElement = __m20;
-
-var TIMEOUT = 1000 * 10;
-
-// options should have container and query
-module.exports = function(collage, options){
-	var container = collage.element;
-
-	if(options.query){
-		return queryTweets(options.query).then(function(tweetIds){
-			return loadTweets(tweetIds, container);
-		});	
-	} else if(options.ids) {
-		return loadTweets(options.ids, container);
-	} else if(options.id){
-		return loadTweets([options.id], container).then(function(elements){
-			if(elements && elements.length) return elements[0];
-		});
-	}
-};
-
-var loadTweets = (function(){
-	return function(ids, container){
-		if(!Array.isArray(ids) || !container) return;
-
-		var index = ids.length,
-			deferred = Q.defer(),
-			elements = [],
-			timedOut = false,
-			waitingForResize = [];
-			timeout = setTimeout(function(){
-				timedOut = true;
-				clearInterval(heightChecker);
-				deferred.resolve(elements);
-			}, TIMEOUT);
-
-		function heightCheck(){
-			var index = waitingForResize.length,
-				element;
-
-			while(index--){
-				element = waitingForResize[index];
-				if(element.height !== "0"  && element.width !== "0"){
-					elements.push(IframeElement.create(element));
-
-					if(elements.length === ids.length){
-						clearTimeout(timeout);
-						clearInterval(heightChecker);
-						deferred.resolve(elements);
-					}
-
-					waitingForResize.splice(index, 1);
-				}
-			}
-		}
-
-		var heightChecker = setInterval(heightCheck, 250);
-
-		while(index--){
-			twttr.widgets.createTweet(ids[index], container, function(element){
-				if(timedOut) return;
-
-				var iframeWindow =  'contentWindow' in element? element.contentWindow : element.contentDocument.defaultView;
-				
-				var onResizeCallback = iframeWindow.onresize,
-					onMouseMoveCallback = iframeWindow.onmousemove;
-				
-				// Iframes capture all events, this allows us to bubble the event
-				// up to this window's scope
-				iframeWindow.onmousemove = function(e){
-					onMouseMoveCallback && onMouseMoveCallback(e);
-					var evt = document.createEvent("MouseEvents"),
-						boundingClientRect = element.getBoundingClientRect();
-
-					evt.initMouseEvent(	"mousemove", 
-										true, 
-										false, 
-										window,
-										e.detail,
-										e.screenX,
-										e.screenY, 
-										e.clientX + boundingClientRect.left, 
-										e.clientY + boundingClientRect.top, 
-										e.ctrlKey, 
-										e.altKey,
-										e.shiftKey, 
-										e.metaKey,
-										e.button, 
-										null);
-					
-					element.dispatchEvent(evt);
-				};
-
-				waitingForResize.push(element);
-				element.style.opacity = 0;
-			});
-		}
-
-		return deferred.promise;
-	};
-}());
-
-var queryTweets = (function(){
-	var endpoint = "http://search.twitter.com/search.json";
-
-	return function(query){
-		return getFromApi(endpoint, [
-			'format=json',
-			'q=' + encodeURIComponent(query)
-		]).then(function(response){
-			var tweetIds = [],
-				dupeCheck = [];
-
-			response.results.forEach(function(item){
-				// Skip retweets
-				if(~dupeCheck.indexOf(item.text)){
-					return;
-				} else {
-					dupeCheck.push(item.text);
-				}
-
-				// Skip matches on username
-				if(~item.from_user.toLowerCase().indexOf(query.toLowerCase())){
-					return;	
-				}
-				
-				tweetIds.push(item.id_str);
-			});
-
-			return tweetIds;
-		});
-	};
-}());
 ;return module.exports;}({},{});
 var __m5 = function(module,exports){module.exports=exports;
 module.exports = Tag;
@@ -4061,9 +3963,11 @@ var Q = __m8,
 	utils = __m3,
 	getFromApi = __m23;
 
-http://api.flickr.com/services/rest/?method=flickr.photos.search&api_key=06960d3c3c8affd01e65ec032513557b&license=1,2,3,4,5,6,7,8&sort=relevance&extras=url_z,url_m,path_alias&per_page=20&content_type=1&media=photos&format=json&tags=
+window.credits = window.credits || {};
+var credits = window.credits.flickr = {};
 
-var endpoint = "http://api.flickr.com/services/rest/";
+//var endpoint = "http://api.flickr.com/services/rest/";
+var endpoint = "/services/rest/";
 
 module.exports = getPhotos;
 
@@ -4125,6 +4029,8 @@ function getPhotos(collage, options){
 				anchor.style.display = "block";
 				anchor.appendChild(element);
 				
+				credits[item.pathalias] = anchor.href;
+				
 				elements.push(SimpleElement.create(anchor));
 				if(--waiting === 0) deferred.resolve(elements);
 			}, function(){
@@ -4154,84 +4060,151 @@ function loadImage(src){
 	return deferred.promise;
 };
 ;return module.exports;}({},{});
-var __m17 = function(module,exports){module.exports=exports;
+var __m16 = function(module,exports){module.exports=exports;
+// This uses an undocumented twitter api (twttr.widget.createTweet) so it might break
+
 var Q = __m8,
-	getFromApi = __m23,
-	IframeElement = __m20,
-	mustache = __m26,
-	utils = __m3;
+	getFromApi = __m23,	
+	utils = __m3,
+	IframeElement = __m20;
 
-var endpoint = "https://graph.facebook.com/search";
+var TIMEOUT = 1000 * 10;
 
+window.credits = window.credits || {};
+var credits = window.credits.twitter = {};
+
+// options should have container and query
 module.exports = function(collage, options){
-	switch(options.type){
-		case "pages":
-			return createPages(collage, options)
-		break;
+	var container = collage.element;
+
+	if(options.query){
+		return queryTweets(options.query).then(function(tweetIds){
+			return loadTweets(tweetIds, container, collage);
+		});	
+	} else if(options.ids) {
+		return loadTweets(options.ids, container, collage);
+	} else if(options.id){
+		return loadTweets([options.id], container, collage).then(function(elements){
+			if(elements && elements.length) return elements[0];
+		});
 	}
 };
 
-var ACTIVITY_BOX_TEMPLATE = '<div class="fb-activity" data-site="www.hrc.org" data-width="{{width}}" data-height="{{height}}" data-header="false" data-recommendations="false"></div>'
-var LIKE_BOX_TEMPLATE = '<div class="fb-like-box" data-href="http://www.facebook.com/{{id}}" data-width="{{width}}" data-height="{{height}}" data-show-faces="true" data-stream="false" data-header="false"></div>';
+var loadTweets = (function(){
+	return function(ids, container, collage){
+		if(!Array.isArray(ids) || !container) return;
 
-var defaults = {
-	limit: 3,
-	width: 400,
-	height: 600,
-	minLikes: 0,
-	showFaces: true,
-	showStream: true,
-	showHeader: false,
-	ids: []
-};
+		var index = ids.length,
+			deferred = Q.defer(),
+			elements = [],
+			timedOut = false,
+			waitingForResize = [];
+			timeout = setTimeout(function(){
+				timedOut = true;
+				clearInterval(heightChecker);
+				deferred.resolve(elements);
+			}, TIMEOUT);
 
-function createPages(collage, options){
-	utils.extend(options, defaults);
-	var ids = options.ids;
-	var gatherIds = Q.when(ids);
-	
-	if(options.query){
+		function heightCheck(){
+			var index = waitingForResize.length,
+				element;
+
+			while(index--){
+				element = waitingForResize[index];
+				if(element.height !== "0"  && element.width !== "0"){
+					elements.push(IframeElement.create(element));
+
+					if(elements.length === ids.length){
+						clearTimeout(timeout);
+						clearInterval(heightChecker);
+						deferred.resolve(elements);
+					}
+
+					waitingForResize.splice(index, 1);
+				}
+			}
+		}
+
+		var heightChecker = setInterval(heightCheck, 250);
+
+		while(index--){
+			twttr.widgets.createTweet(ids[index], container, function(element){
+				if(timedOut) return;
+
+				var iframeWindow =  'contentWindow' in element? element.contentWindow : element.contentDocument.defaultView;
+				
+				var onResizeCallback = iframeWindow.onresize,
+					onMouseMoveCallback = iframeWindow.onmousemove;
+				
+				// Iframes capture all events, this allows us to bubble the event
+				// up to this window's scope
+				iframeWindow.onmousemove = function(e){
+					onMouseMoveCallback && onMouseMoveCallback(e);
+					var evt = document.createEvent("MouseEvents"),
+						boundingClientRect = element.getBoundingClientRect();
+
+					evt.initMouseEvent(	"mousemove", 
+										true, 
+										false, 
+										window,
+										e.detail,
+										e.screenX,
+										e.screenY, 
+										e.clientX + boundingClientRect.left, 
+										e.clientY + boundingClientRect.top, 
+										e.ctrlKey, 
+										e.altKey,
+										e.shiftKey, 
+										e.metaKey,
+										e.button, 
+										null);
+					
+					element.dispatchEvent(evt);
+				};
+
+				waitingForResize.push(element);
+				element.style.opacity = 0;
+			});
+		}
+
+		return deferred.promise;
+	};
+}());
+
+var queryTweets = (function(){
+	//var endpoint = "http://search.twitter.com/search.json";
+	var endpoint = "/search.json";
+
+	return function(query){
 		return getFromApi(endpoint, [
-			'type=page',
-			'fields=name,link,likes,category',
-			'limit=' + options.limit,
-			'q=' + encodeURIComponent(options.query)
+			'format=json',
+			'q=' + encodeURIComponent(query)
 		]).then(function(response){
-			response.data.forEach(function(item){
-				if(item.likes < options.minLikes) return;
-				ids.push(item.id);
+			var tweetIds = [],
+				dupeCheck = [];
+
+			response.results.forEach(function(item){
+				// Skip retweets
+				if(~dupeCheck.indexOf(item.text)){
+					return;
+				} else {
+					dupeCheck.push(item.text);
+				}
+
+				// Skip matches on username
+				if(~item.from_user.toLowerCase().indexOf(query.toLowerCase())){
+					return;	
+				}
+
+				credits[item.from_user] = "http://twitter.com/" + item.from_user;
+
+				tweetIds.push(item.id_str);
 			});
 
-			return loadLikeBoxes(collage, ids, options);
+			return tweetIds;
 		});
-	} else {
-		return Q.when(loadLikeBoxes(collage, ids, options));
-	}
-};
-
-function loadLikeBoxes(collage, ids, options){
-	var elements = [];
-
-	ids.forEach(function(id){
-		var element = document.createElement("div");
-		element.className="fb-like-box";
-		element.setAttribute("data-href", "http://www.facebook.com/" + id);
-		element.setAttribute("data-width", options.width);
-		element.setAttribute("data-height", options.height);
-		element.setAttribute("data-show-faces", options.showFaces);
-		element.setAttribute("data-stream", options.showStream);
-		element.setAttribute("data-header", options.showHeader);
-
-		var iframeElement = utils.attachIframeToCollage(collage, element, options.width, options.height);
-		
-		FB.XFBML.parse(iframeElement);
-
-		elements.push(new IframeElement(iframeElement));
-	});
-	
-	return elements;
-}
-
+	};
+}());
 ;return module.exports;}({},{});
 var __m18 = function(module,exports){module.exports=exports;
 var Q = __m8,
@@ -4254,20 +4227,64 @@ module.exports = function(collage, options){
 var __m19 = function(module,exports){module.exports=exports;
 var Q = __m8,
 	SimpleElement = __m21,
+	IframeElement = __m20,
 	utils = __m3,
 	getFromApi = __m23;
 
-var endpoint = "http://www.reddit.com/search.json";
+window.credits = window.credits || {};
+var credits = window.credits.reddit = {};
 
-module.exports = getPhotos;
+//var endpoint = "http://www.reddit.com/r/all/search.json";
+var endpoint = "/r/all/search.json";
+
+module.exports = function(collage, options){
+	if(options.type === "embed"){
+		return getEmbed(collage, options);
+	} else {
+		return getPhotos(collage, options);
+	}
+};
+
+function getEmbed(collage, options){
+	utils.extend(options, defaults);
+	params = [
+		"limit=" + options.limit,
+		"restrict_sr=" + options.restrict_sr, 
+		"sort=" + options.sort,
+		"t=" + options.time,
+		"q=" + options.query
+	];
+
+	var iframe;
+	var self = this,
+		iframe = document.createElement("IFRAME"),
+		iframeDoc,
+		iframeContent;
+
+	var element = utils.attachIframeToCollage(collage, iframe, options.width, options.height);
+
+	iframeDoc = (iframe.contentDocument) ? iframe.contentDocument : iframe.contentWindow.document;
+	iframeContent = "<html><head><title></title></head><body>";
+	iframeContent += '<script type="text/javascript" src="http://www.reddit.com/r/' + options.subreddit + '/search.embed?' + params.join("&").replace(' ', '%20') + '"></script>';
+	iframeContent += "</body></html>";
+	
+	iframeDoc.open();
+	iframeDoc.write(iframeContent);
+	iframeDoc.close();
+	
+	return Q.when(new IframeElement(element));
+}
 
 var defaults = {
 	limit: "20",
+	subreddit: "all",
 	restrict_sr: "false",
 	sort: "top",
 	time: "all",
 	nsfw: "false",
 	minComments: 0,
+	width: 500,
+	height:600,
 	minScore: 0
 };
 
@@ -4306,7 +4323,9 @@ function getPhotos(collage, options){
 		waiting = photos.length;
 		photos.forEach(function(item){
 			item = item.data;
-
+			
+			credits[item.author] = "http://www.reddit.com" + item.permalink;
+			
 			loadImage(item.url).then(function(element){
 				var anchor = document.createElement("a");
 				anchor.href = "http://www.reddit.com" + item.permalink;
@@ -4345,6 +4364,91 @@ function loadImage(src){
 
 	return deferred.promise;
 };
+;return module.exports;}({},{});
+var __m17 = function(module,exports){module.exports=exports;
+var Q = __m8,
+	getFromApi = __m23,
+	IframeElement = __m20,
+	mustache = __m25,
+	utils = __m3;
+
+//var endpoint = "https://graph.facebook.com/search";
+var endpoint = "/search";
+
+window.credits = window.credits || {};
+var credits = window.credits.facebook = {};
+
+module.exports = function(collage, options){
+	switch(options.type){
+		case "pages":
+			return createPages(collage, options)
+		break;
+	}
+};
+
+var ACTIVITY_BOX_TEMPLATE = '<div class="fb-activity" data-site="www.hrc.org" data-width="{{width}}" data-height="{{height}}" data-header="false" data-recommendations="false"></div>'
+var LIKE_BOX_TEMPLATE = '<div class="fb-like-box" data-href="http://www.facebook.com/{{id}}" data-width="{{width}}" data-height="{{height}}" data-show-faces="true" data-stream="false" data-header="false"></div>';
+
+var defaults = {
+	limit: 3,
+	width: 400,
+	height: 600,
+	minLikes: 0,
+	showFaces: true,
+	showStream: true,
+	showHeader: false,
+	ids: []
+};
+
+function createPages(collage, options){
+	utils.extend(options, defaults);
+	var ids = options.ids;
+	var gatherIds = Q.when(ids);
+	
+	if(options.query){
+		return getFromApi(endpoint, [
+			'type=page',
+			'fields=name,link,likes,category',
+			'limit=' + options.limit,
+			'q=' + encodeURIComponent(options.query)
+		]).then(function(response){
+			response.data.forEach(function(item){
+				if(item.likes < options.minLikes) return;
+			
+				credits[item.name] = item.link;
+				ids.push(item.id);
+			});
+
+			return loadLikeBoxes(collage, ids, options);
+		});
+	} else {
+		return Q.when(loadLikeBoxes(collage, ids, options));
+	}
+};
+
+function loadLikeBoxes(collage, ids, options){
+	var elements = [];
+
+	ids.forEach(function(id){
+		var element = document.createElement("div");
+		element.className="fb-like-box";
+		element.setAttribute("data-href", "http://www.facebook.com/" + id);
+		element.setAttribute("data-width", options.width);
+		element.setAttribute("data-height", options.height);
+		element.setAttribute("data-show-faces", options.showFaces);
+		element.setAttribute("data-stream", options.showStream);
+		element.setAttribute("data-header", options.showHeader);
+
+		var iframeElement = utils.attachIframeToCollage(collage, element, options.width, options.height);
+		
+		FB.XFBML.parse(iframeElement);
+
+		elements.push(new IframeElement(iframeElement));
+	});
+	
+	return elements;
+}
+
 ;return module.exports;}({},{});
 var __m6 = function(module,exports){module.exports=exports;
 exports.flickr = __m10;
@@ -6228,7 +6332,6 @@ var Surface = module.exports = function(container){
 	
 	this.horizontalVelocity = 0;
 	this.verticalVelocity = 0;
-	this.noMoveSpinCount = Surface.prototype.noMoveSpinCount;
 
 	this.cssTransitions = {};
 	this.cssFilters = {};
@@ -6338,7 +6441,6 @@ Surface.prototype.refit = function(){
 Surface.prototype.startTransformLoop = function(){
 	if(this.transforming) return;
 
-	this.noMoveSpinCount = Surface.prototype.noMoveSpinCount;
 	this.transforming = true;
 	this.lastStepTime = Date.now();
 	this.animationRequestId = requestAnimationFrame(this.transformStep);
@@ -6354,7 +6456,6 @@ Surface.prototype.stopTransformLoop = function(){
 	this.emitter.emit("move stop");
 };
 
-Surface.prototype.noMoveSpinCount = 10;
 Surface.prototype.transformStep = function(){
 	var currentTime = Date.now(),
 		lagScalar = (currentTime - this.lastStepTime) / this.msPerStep;

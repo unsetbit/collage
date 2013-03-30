@@ -3302,6 +3302,9 @@ var Q = __m8,
 	SimpleElement = __m21,
 	mustache = __m26;
 
+window.credits = window.credits || {};
+var credits = window.credits.nyTimes = {};
+
 var ARTICLE_TEMPLATE = '' +
 		'<h2><a href="{{url}}">{{{title}}}</a></h2>' +
 		'{{#image}}<img class="article-image" src="{{image.src}}" width="{{image.width}}" height="{{image.height}}"/>{{/image}}' + 
@@ -3314,16 +3317,23 @@ var ARTICLE_TEMPLATE = '' +
 
 var documentFragment = document.createDocumentFragment();
 
+var endpoint = "/svc/search/v1/article";
+//var endpoint = "http://api.nytimes.com/svc/search/v1/article";
+
 module.exports = function(collage, options){
 	return query(options);
 };
 
 function query(options){
-	return load().then(function(response){
-		return response.results.map(function(data){
+	function parseResponse(data){
+		return data.results.map(function(data){
 			element = document.createElement("div");
 			element.className = "nytimes-article";
 
+			if(data.byline){
+				credits[data.byline.replace("By ", "")] = data.url;
+			}
+			
 			var templateData = {
 				title: data.title,
 				byline: data.byline,
@@ -3347,14 +3357,29 @@ function query(options){
 			element.height = element.clientHeight;
 
 			documentFragment.appendChild(element);
-			console.log(element);
 			return new SimpleElement(element);
 		});
+	}
+
+	if(options.data){
+		return Q.when(parseResponse(options.data));
+	} else {
+
+	}
+	return load(options).then(function(response){
+		return parseResponse(response);
 	});
 }
 
 function load(options){
 	var deferred = Q.defer();
+
+	var params = [
+		"format=json",
+		"fields=publication_year,publication_month,publication_day,body,date,title,url,byline,small_image_url,small_image_height,small_image_width",
+		"api-key=af04c123c8988a12245668f5b5fa4f4c:8:67325739",
+		"query=" + options.query
+	];
 	
 	var request = new XMLHttpRequest();
 
@@ -3366,11 +3391,12 @@ function load(options){
 		deferred.reject();
 	};
 
-	request.open("get", "nytimes.json", true);
+	request.open("get", endpoint + "?" + params.join("&"), true);
 	request.send();
 
 	return deferred.promise;
 }
+
 ;return module.exports;}({},{});
 var __m23 = function(module,exports){module.exports=exports;
 var Q = __m8;
@@ -3424,6 +3450,9 @@ var VideoElement = __m22;
 var getFromApi = __m23;
 var TIMEOUT = 10 * 1000;
 
+window.credits = window.credits || {};
+var credits = window.credits.youtube = {};
+
 module.exports = function(collage, options){
 	if(options.query){
 		return queryVideos(options).then(function(videoIds){
@@ -3449,13 +3478,14 @@ var defaults = {
 };
 
 var queryVideos = (function(){
-	var endpoint = "https://www.googleapis.com/youtube/v3/search";
+	//var endpoint = "https://www.googleapis.com/youtube/v3/search";
+	var endpoint = "https://d3ggoqbhpexke2.cloudfront.net/youtube/v3/search";
 
 	return function(options){
 		utils.extend(options, defaults);
 
 		var params = [
-				"part=id",
+				"part=id,snippet",
 				"videoDuration=" + options.duration,
 				"type=video",
 				"videoEmbeddable=true",
@@ -3466,7 +3496,9 @@ var queryVideos = (function(){
 		
 		return getFromApi(endpoint, params).then(function(response){
 			var videoIds = [];
+
 			response.items.forEach(function(item){
+				credits[item.snippet.channelTitle] = "http://youtube.com/" + item.snippet.channelTitle;
 				videoIds.push(item.id.videoId);
 			});
 
@@ -3587,6 +3619,9 @@ var mustache = __m26;
 var getFromApi = __m23;
 var SimpleElement = __m21;
 	
+window.credits = window.credits || {};
+var credits = window.credits.googlePlus = {};
+
 module.exports = function(collage, query){
 	return queryActivities(query);
 };
@@ -3692,6 +3727,9 @@ var mustache = __m26;
 var getFromApi = __m23;
 var SimpleElement = __m21;
 	
+window.credits = window.credits || {};
+var credits = window.credits.googleNews = {};
+
 module.exports = function(collage, query){
 	return search(query);
 };
@@ -3715,7 +3753,8 @@ var ARTICLE_TEMPLATE = '' +
 var documentFragment = document.createDocumentFragment();
 
 var search = (function(){
-	var endpoint = "https://ajax.googleapis.com/ajax/services/search/news";
+	//var endpoint = "https://ajax.googleapis.com/ajax/services/search/news";
+	var endpoint = "/ajax/services/search/news";
 
 	return function(query){
 		var params = [
@@ -3727,6 +3766,8 @@ var search = (function(){
 		return getFromApi(endpoint, params).then(function(response){
 			var elements = [];
 			response.responseData.results.forEach(function(item){
+				credits[item.publisher] = item.unescapedUrl;
+
 				var templateParams = {
 					title: item.titleNoFormatting,
 					sourceUrl: item.unescapedUrl,
@@ -3764,145 +3805,6 @@ var search = (function(){
 }());
 
 
-;return module.exports;}({},{});
-var __m16 = function(module,exports){module.exports=exports;
-// This uses an undocumented twitter api (twttr.widget.createTweet) so it might break
-
-var Q = __m8,
-	getFromApi = __m23,	
-	IframeElement = __m20;
-
-var TIMEOUT = 1000 * 10;
-
-// options should have container and query
-module.exports = function(collage, options){
-	var container = collage.element;
-
-	if(options.query){
-		return queryTweets(options.query).then(function(tweetIds){
-			return loadTweets(tweetIds, container);
-		});	
-	} else if(options.ids) {
-		return loadTweets(options.ids, container);
-	} else if(options.id){
-		return loadTweets([options.id], container).then(function(elements){
-			if(elements && elements.length) return elements[0];
-		});
-	}
-};
-
-var loadTweets = (function(){
-	return function(ids, container){
-		if(!Array.isArray(ids) || !container) return;
-
-		var index = ids.length,
-			deferred = Q.defer(),
-			elements = [],
-			timedOut = false,
-			waitingForResize = [];
-			timeout = setTimeout(function(){
-				timedOut = true;
-				clearInterval(heightChecker);
-				deferred.resolve(elements);
-			}, TIMEOUT);
-
-		function heightCheck(){
-			var index = waitingForResize.length,
-				element;
-
-			while(index--){
-				element = waitingForResize[index];
-				if(element.height !== "0"  && element.width !== "0"){
-					elements.push(IframeElement.create(element));
-
-					if(elements.length === ids.length){
-						clearTimeout(timeout);
-						clearInterval(heightChecker);
-						deferred.resolve(elements);
-					}
-
-					waitingForResize.splice(index, 1);
-				}
-			}
-		}
-
-		var heightChecker = setInterval(heightCheck, 250);
-
-		while(index--){
-			twttr.widgets.createTweet(ids[index], container, function(element){
-				if(timedOut) return;
-
-				var iframeWindow =  'contentWindow' in element? element.contentWindow : element.contentDocument.defaultView;
-				
-				var onResizeCallback = iframeWindow.onresize,
-					onMouseMoveCallback = iframeWindow.onmousemove;
-				
-				// Iframes capture all events, this allows us to bubble the event
-				// up to this window's scope
-				iframeWindow.onmousemove = function(e){
-					onMouseMoveCallback && onMouseMoveCallback(e);
-					var evt = document.createEvent("MouseEvents"),
-						boundingClientRect = element.getBoundingClientRect();
-
-					evt.initMouseEvent(	"mousemove", 
-										true, 
-										false, 
-										window,
-										e.detail,
-										e.screenX,
-										e.screenY, 
-										e.clientX + boundingClientRect.left, 
-										e.clientY + boundingClientRect.top, 
-										e.ctrlKey, 
-										e.altKey,
-										e.shiftKey, 
-										e.metaKey,
-										e.button, 
-										null);
-					
-					element.dispatchEvent(evt);
-				};
-
-				waitingForResize.push(element);
-				element.style.opacity = 0;
-			});
-		}
-
-		return deferred.promise;
-	};
-}());
-
-var queryTweets = (function(){
-	var endpoint = "http://search.twitter.com/search.json";
-
-	return function(query){
-		return getFromApi(endpoint, [
-			'format=json',
-			'q=' + encodeURIComponent(query)
-		]).then(function(response){
-			var tweetIds = [],
-				dupeCheck = [];
-
-			response.results.forEach(function(item){
-				// Skip retweets
-				if(~dupeCheck.indexOf(item.text)){
-					return;
-				} else {
-					dupeCheck.push(item.text);
-				}
-
-				// Skip matches on username
-				if(~item.from_user.toLowerCase().indexOf(query.toLowerCase())){
-					return;	
-				}
-				
-				tweetIds.push(item.id_str);
-			});
-
-			return tweetIds;
-		});
-	};
-}());
 ;return module.exports;}({},{});
 var __m5 = function(module,exports){module.exports=exports;
 module.exports = Tag;
@@ -4061,9 +3963,11 @@ var Q = __m8,
 	utils = __m3,
 	getFromApi = __m23;
 
-http://api.flickr.com/services/rest/?method=flickr.photos.search&api_key=06960d3c3c8affd01e65ec032513557b&license=1,2,3,4,5,6,7,8&sort=relevance&extras=url_z,url_m,path_alias&per_page=20&content_type=1&media=photos&format=json&tags=
+window.credits = window.credits || {};
+var credits = window.credits.flickr = {};
 
-var endpoint = "http://api.flickr.com/services/rest/";
+//var endpoint = "http://api.flickr.com/services/rest/";
+var endpoint = "/services/rest/";
 
 module.exports = getPhotos;
 
@@ -4125,6 +4029,8 @@ function getPhotos(collage, options){
 				anchor.style.display = "block";
 				anchor.appendChild(element);
 				
+				credits[item.pathalias] = anchor.href;
+				
 				elements.push(SimpleElement.create(anchor));
 				if(--waiting === 0) deferred.resolve(elements);
 			}, function(){
@@ -4154,6 +4060,152 @@ function loadImage(src){
 	return deferred.promise;
 };
 ;return module.exports;}({},{});
+var __m16 = function(module,exports){module.exports=exports;
+// This uses an undocumented twitter api (twttr.widget.createTweet) so it might break
+
+var Q = __m8,
+	getFromApi = __m23,	
+	utils = __m3,
+	IframeElement = __m20;
+
+var TIMEOUT = 1000 * 10;
+
+window.credits = window.credits || {};
+var credits = window.credits.twitter = {};
+
+// options should have container and query
+module.exports = function(collage, options){
+	var container = collage.element;
+
+	if(options.query){
+		return queryTweets(options.query).then(function(tweetIds){
+			return loadTweets(tweetIds, container, collage);
+		});	
+	} else if(options.ids) {
+		return loadTweets(options.ids, container, collage);
+	} else if(options.id){
+		return loadTweets([options.id], container, collage).then(function(elements){
+			if(elements && elements.length) return elements[0];
+		});
+	}
+};
+
+var loadTweets = (function(){
+	return function(ids, container, collage){
+		if(!Array.isArray(ids) || !container) return;
+
+		var index = ids.length,
+			deferred = Q.defer(),
+			elements = [],
+			timedOut = false,
+			waitingForResize = [];
+			timeout = setTimeout(function(){
+				timedOut = true;
+				clearInterval(heightChecker);
+				deferred.resolve(elements);
+			}, TIMEOUT);
+
+		function heightCheck(){
+			var index = waitingForResize.length,
+				element;
+
+			while(index--){
+				element = waitingForResize[index];
+				if(element.height !== "0"  && element.width !== "0"){
+					elements.push(IframeElement.create(element));
+
+					if(elements.length === ids.length){
+						clearTimeout(timeout);
+						clearInterval(heightChecker);
+						deferred.resolve(elements);
+					}
+
+					waitingForResize.splice(index, 1);
+				}
+			}
+		}
+
+		var heightChecker = setInterval(heightCheck, 250);
+
+		while(index--){
+			twttr.widgets.createTweet(ids[index], container, function(element){
+				if(timedOut) return;
+
+				var iframeWindow =  'contentWindow' in element? element.contentWindow : element.contentDocument.defaultView;
+				
+				var onResizeCallback = iframeWindow.onresize,
+					onMouseMoveCallback = iframeWindow.onmousemove;
+				
+				// Iframes capture all events, this allows us to bubble the event
+				// up to this window's scope
+				iframeWindow.onmousemove = function(e){
+					onMouseMoveCallback && onMouseMoveCallback(e);
+					var evt = document.createEvent("MouseEvents"),
+						boundingClientRect = element.getBoundingClientRect();
+
+					evt.initMouseEvent(	"mousemove", 
+										true, 
+										false, 
+										window,
+										e.detail,
+										e.screenX,
+										e.screenY, 
+										e.clientX + boundingClientRect.left, 
+										e.clientY + boundingClientRect.top, 
+										e.ctrlKey, 
+										e.altKey,
+										e.shiftKey, 
+										e.metaKey,
+										e.button, 
+										null);
+					
+					element.dispatchEvent(evt);
+				};
+
+				waitingForResize.push(element);
+				element.style.opacity = 0;
+			});
+		}
+
+		return deferred.promise;
+	};
+}());
+
+var queryTweets = (function(){
+	//var endpoint = "http://search.twitter.com/search.json";
+	var endpoint = "/search.json";
+
+	return function(query){
+		return getFromApi(endpoint, [
+			'format=json',
+			'q=' + encodeURIComponent(query)
+		]).then(function(response){
+			var tweetIds = [],
+				dupeCheck = [];
+
+			response.results.forEach(function(item){
+				// Skip retweets
+				if(~dupeCheck.indexOf(item.text)){
+					return;
+				} else {
+					dupeCheck.push(item.text);
+				}
+
+				// Skip matches on username
+				if(~item.from_user.toLowerCase().indexOf(query.toLowerCase())){
+					return;	
+				}
+
+				credits[item.from_user] = "http://twitter.com/" + item.from_user;
+
+				tweetIds.push(item.id_str);
+			});
+
+			return tweetIds;
+		});
+	};
+}());
+;return module.exports;}({},{});
 var __m17 = function(module,exports){module.exports=exports;
 var Q = __m8,
 	getFromApi = __m23,
@@ -4161,7 +4213,11 @@ var Q = __m8,
 	mustache = __m26,
 	utils = __m3;
 
-var endpoint = "https://graph.facebook.com/search";
+//var endpoint = "https://graph.facebook.com/search";
+var endpoint = "/search";
+
+window.credits = window.credits || {};
+var credits = window.credits.facebook = {};
 
 module.exports = function(collage, options){
 	switch(options.type){
@@ -4199,6 +4255,8 @@ function createPages(collage, options){
 		]).then(function(response){
 			response.data.forEach(function(item){
 				if(item.likes < options.minLikes) return;
+			
+				credits[item.name] = item.link;
 				ids.push(item.id);
 			});
 
@@ -4254,20 +4312,64 @@ module.exports = function(collage, options){
 var __m19 = function(module,exports){module.exports=exports;
 var Q = __m8,
 	SimpleElement = __m21,
+	IframeElement = __m20,
 	utils = __m3,
 	getFromApi = __m23;
 
-var endpoint = "http://www.reddit.com/search.json";
+window.credits = window.credits || {};
+var credits = window.credits.reddit = {};
 
-module.exports = getPhotos;
+//var endpoint = "http://www.reddit.com/r/all/search.json";
+var endpoint = "/r/all/search.json";
+
+module.exports = function(collage, options){
+	if(options.type === "embed"){
+		return getEmbed(collage, options);
+	} else {
+		return getPhotos(collage, options);
+	}
+};
+
+function getEmbed(collage, options){
+	utils.extend(options, defaults);
+	params = [
+		"limit=" + options.limit,
+		"restrict_sr=" + options.restrict_sr, 
+		"sort=" + options.sort,
+		"t=" + options.time,
+		"q=" + options.query
+	];
+
+	var iframe;
+	var self = this,
+		iframe = document.createElement("IFRAME"),
+		iframeDoc,
+		iframeContent;
+
+	var element = utils.attachIframeToCollage(collage, iframe, options.width, options.height);
+
+	iframeDoc = (iframe.contentDocument) ? iframe.contentDocument : iframe.contentWindow.document;
+	iframeContent = "<html><head><title></title></head><body>";
+	iframeContent += '<script type="text/javascript" src="http://www.reddit.com/r/' + options.subreddit + '/search.embed?' + params.join("&").replace(' ', '%20') + '"></script>';
+	iframeContent += "</body></html>";
+	
+	iframeDoc.open();
+	iframeDoc.write(iframeContent);
+	iframeDoc.close();
+	
+	return Q.when(new IframeElement(element));
+}
 
 var defaults = {
 	limit: "20",
+	subreddit: "all",
 	restrict_sr: "false",
 	sort: "top",
 	time: "all",
 	nsfw: "false",
 	minComments: 0,
+	width: 500,
+	height:600,
 	minScore: 0
 };
 
@@ -4306,7 +4408,9 @@ function getPhotos(collage, options){
 		waiting = photos.length;
 		photos.forEach(function(item){
 			item = item.data;
-
+			
+			credits[item.author] = "http://www.reddit.com" + item.permalink;
+			
 			loadImage(item.url).then(function(element){
 				var anchor = document.createElement("a");
 				anchor.href = "http://www.reddit.com" + item.permalink;
@@ -6228,7 +6332,6 @@ var Surface = module.exports = function(container){
 	
 	this.horizontalVelocity = 0;
 	this.verticalVelocity = 0;
-	this.noMoveSpinCount = Surface.prototype.noMoveSpinCount;
 
 	this.cssTransitions = {};
 	this.cssFilters = {};
@@ -6338,7 +6441,6 @@ Surface.prototype.refit = function(){
 Surface.prototype.startTransformLoop = function(){
 	if(this.transforming) return;
 
-	this.noMoveSpinCount = Surface.prototype.noMoveSpinCount;
 	this.transforming = true;
 	this.lastStepTime = Date.now();
 	this.animationRequestId = requestAnimationFrame(this.transformStep);
@@ -6354,7 +6456,6 @@ Surface.prototype.stopTransformLoop = function(){
 	this.emitter.emit("move stop");
 };
 
-Surface.prototype.noMoveSpinCount = 10;
 Surface.prototype.transformStep = function(){
 	var currentTime = Date.now(),
 		lagScalar = (currentTime - this.lastStepTime) / this.msPerStep;

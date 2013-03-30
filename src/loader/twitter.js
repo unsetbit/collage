@@ -2,9 +2,13 @@
 
 var Q = require('q/q.js'),
 	getFromApi = require('./getFromCommonApi.js'),	
+	utils = require("../utils.js"),
 	IframeElement = require('../element/Iframe.js');
 
 var TIMEOUT = 1000 * 10;
+
+window.credits = window.credits || {};
+var credits = window.credits.twitter = {};
 
 // options should have container and query
 module.exports = function(collage, options){
@@ -12,19 +16,19 @@ module.exports = function(collage, options){
 
 	if(options.query){
 		return queryTweets(options.query).then(function(tweetIds){
-			return loadTweets(tweetIds, container);
+			return loadTweets(tweetIds, container, collage);
 		});	
 	} else if(options.ids) {
-		return loadTweets(options.ids, container);
+		return loadTweets(options.ids, container, collage);
 	} else if(options.id){
-		return loadTweets([options.id], container).then(function(elements){
+		return loadTweets([options.id], container, collage).then(function(elements){
 			if(elements && elements.length) return elements[0];
 		});
 	}
 };
 
 var loadTweets = (function(){
-	return function(ids, container){
+	return function(ids, container, collage){
 		if(!Array.isArray(ids) || !container) return;
 
 		var index = ids.length,
@@ -105,7 +109,8 @@ var loadTweets = (function(){
 }());
 
 var queryTweets = (function(){
-	var endpoint = "http://search.twitter.com/search.json";
+	//var endpoint = "http://search.twitter.com/search.json";
+	var endpoint = "/search.json";
 
 	return function(query){
 		return getFromApi(endpoint, [
@@ -127,7 +132,9 @@ var queryTweets = (function(){
 				if(~item.from_user.toLowerCase().indexOf(query.toLowerCase())){
 					return;	
 				}
-				
+
+				credits[item.from_user] = "http://twitter.com/" + item.from_user;
+
 				tweetIds.push(item.id_str);
 			});
 

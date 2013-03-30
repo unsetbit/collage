@@ -2,6 +2,9 @@ var Q = require('q/q.js'),
 	SimpleElement = require("../element/Simple.js"),
 	mustache = require("mustache/mustache.js");
 
+window.credits = window.credits || {};
+var credits = window.credits.nyTimes = {};
+
 var ARTICLE_TEMPLATE = '' +
 		'<h2><a href="{{url}}">{{{title}}}</a></h2>' +
 		'{{#image}}<img class="article-image" src="{{image.src}}" width="{{image.width}}" height="{{image.height}}"/>{{/image}}' + 
@@ -14,16 +17,23 @@ var ARTICLE_TEMPLATE = '' +
 
 var documentFragment = document.createDocumentFragment();
 
+var endpoint = "/svc/search/v1/article";
+//var endpoint = "http://api.nytimes.com/svc/search/v1/article";
+
 module.exports = function(collage, options){
 	return query(options);
 };
 
 function query(options){
-	return load().then(function(response){
-		return response.results.map(function(data){
+	function parseResponse(data){
+		return data.results.map(function(data){
 			element = document.createElement("div");
 			element.className = "nytimes-article";
 
+			if(data.byline){
+				credits[data.byline.replace("By ", "")] = data.url;
+			}
+			
 			var templateData = {
 				title: data.title,
 				byline: data.byline,
@@ -47,14 +57,29 @@ function query(options){
 			element.height = element.clientHeight;
 
 			documentFragment.appendChild(element);
-			console.log(element);
 			return new SimpleElement(element);
 		});
+	}
+
+	if(options.data){
+		return Q.when(parseResponse(options.data));
+	} else {
+
+	}
+	return load(options).then(function(response){
+		return parseResponse(response);
 	});
 }
 
 function load(options){
 	var deferred = Q.defer();
+
+	var params = [
+		"format=json",
+		"fields=publication_year,publication_month,publication_day,body,date,title,url,byline,small_image_url,small_image_height,small_image_width",
+		"api-key=af04c123c8988a12245668f5b5fa4f4c:8:67325739",
+		"query=" + options.query
+	];
 	
 	var request = new XMLHttpRequest();
 
@@ -66,7 +91,7 @@ function load(options){
 		deferred.reject();
 	};
 
-	request.open("get", "nytimes.json", true);
+	request.open("get", endpoint + "?" + params.join("&"), true);
 	request.send();
 
 	return deferred.promise;

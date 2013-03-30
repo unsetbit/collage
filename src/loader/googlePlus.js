@@ -3,6 +3,9 @@ var mustache = require("mustache/mustache.js");
 var getFromApi = require('./getFromCommonApi.js');
 var SimpleElement = require("../element/Simple.js");
 	
+window.credits = window.credits || {};
+var credits = window.credits.googlePlus = {};
+
 module.exports = function(collage, query){
 	return queryActivities(query);
 };

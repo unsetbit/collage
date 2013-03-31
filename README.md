@@ -8,8 +8,9 @@ space to create memorable and meaningful experiences. It's a mixture between [Bi
 a public API library.
 
 ## Use
-For plain JavaScript applications, use the [dist/collage.js](https://raw.github.com/ozanturgut/collage/master/dist/collage.js), which will inject the Surface object to the global
-scope. If you're using NodeJS (or any system that uses the export/require pattern), use [dist/collage-module.js](https://raw.github.com/ozanturgut/collage/master/dist/collage-module.js), 
+For plain JavaScript applications, use the [dist/collage.js](https://raw.github.com/ozanturgut/collage/master/dist/collage.js), 
+which will inject the Collage module object to the global scope (window.Collage). 
+If you're using NodeJS (or any system that uses the export/require pattern), use [dist/collage-module.js](https://raw.github.com/ozanturgut/collage/master/dist/collage-module.js), 
 as it exports the Collage object.
 
 Depending on which loaders you use, you will need to include these in your HTML doc, before starting the collage:

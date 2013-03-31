@@ -1010,42 +1010,6 @@ Element.prototype.show = function(left, top){
 	this.isVisible = true;
 };
 ;return module.exports;}({},{});
-var __m21 = function(module,exports){module.exports=exports;
-var Element = __m24;
-
-module.exports = SimpleElement;
-
-function SimpleElement (element){
-	Element.call(this, element, parseInt(element.width), parseInt(element.height));
-	this.appended;
-};
-SimpleElement.prototype = Object.create(Element.prototype);
-
-SimpleElement.create = function(element){
-	element = new SimpleElement(element);
-	return SimpleElement.getApi(element);
-}
-
-SimpleElement.getApi = function(element){
-	return Element.getApi(element);
-};
-
-var hidingArea = document.createDocumentFragment();
-SimpleElement.prototype.hide = function(){	
-	Element.prototype.hide.call(this);
-	this.element.style.display = "none";
-	//hidingArea.appendChild(this.element);
-};
-
-SimpleElement.prototype.show = function(left, top, container){
-	Element.prototype.show.call(this, left, top);
-	this.element.style.display = "block";
-	if(!this.appended){
-		container.appendChild(this.element);
-		this.appended = true;
-	}
-};
-;return module.exports;}({},{});
 var __m20 = function(module,exports){module.exports=exports;
 var Element = __m24;
 
@@ -1108,6 +1072,42 @@ IframeElement.prototype.show = function(left, top){
 	}
 };
 
+;return module.exports;}({},{});
+var __m21 = function(module,exports){module.exports=exports;
+var Element = __m24;
+
+module.exports = SimpleElement;
+
+function SimpleElement (element){
+	Element.call(this, element, parseInt(element.width), parseInt(element.height));
+	this.appended;
+};
+SimpleElement.prototype = Object.create(Element.prototype);
+
+SimpleElement.create = function(element){
+	element = new SimpleElement(element);
+	return SimpleElement.getApi(element);
+}
+
+SimpleElement.getApi = function(element){
+	return Element.getApi(element);
+};
+
+var hidingArea = document.createDocumentFragment();
+SimpleElement.prototype.hide = function(){	
+	Element.prototype.hide.call(this);
+	this.element.style.display = "none";
+	//hidingArea.appendChild(this.element);
+};
+
+SimpleElement.prototype.show = function(left, top, container){
+	Element.prototype.show.call(this, left, top);
+	this.element.style.display = "block";
+	if(!this.appended){
+		container.appendChild(this.element);
+		this.appended = true;
+	}
+};
 ;return module.exports;}({},{});
 var __m22 = function(module,exports){module.exports=exports;
 __m25;
@@ -4295,24 +4295,6 @@ function loadLikeBoxes(collage, ids, options){
 }
 
 ;return module.exports;}({},{});
-var __m18 = function(module,exports){module.exports=exports;
-var Q = __m8,
-	IframeElement = __m20,
-	utils = __m3;
-
-module.exports = function(collage, options){
-	var width = options.width || 500,
-		height = options.height || 500;
-
-	var iframe = document.createElement("iframe");
-	iframe.src = options.url;
-
-	var element = utils.attachIframeToCollage(collage, iframe, width, height);
-
-	return Q.when(new IframeElement(element));
-};
-
-;return module.exports;}({},{});
 var __m19 = function(module,exports){module.exports=exports;
 var Q = __m8,
 	SimpleElement = __m21,
@@ -4453,6 +4435,24 @@ function loadImage(src){
 
 	return deferred.promise;
 };
+;return module.exports;}({},{});
+var __m18 = function(module,exports){module.exports=exports;
+var Q = __m8,
+	IframeElement = __m20,
+	utils = __m3;
+
+module.exports = function(collage, options){
+	var width = options.width || 500,
+		height = options.height || 500;
+
+	var iframe = document.createElement("iframe");
+	iframe.src = options.url;
+
+	var element = utils.attachIframeToCollage(collage, iframe, width, height);
+
+	return Q.when(new IframeElement(element));
+};
+
 ;return module.exports;}({},{});
 var __m6 = function(module,exports){module.exports=exports;
 exports.flickr = __m10;
@@ -6444,7 +6444,7 @@ Surface.prototype.refit = function(){
 
 Surface.prototype.startTransformLoop = function(){
 	if(this.transforming) return;
-console.log("start transform loop");
+
 	this.transforming = true;
 	this.lastStepTime = Date.now();
 	this.animationRequestId = requestAnimationFrame(this.transformStep);
@@ -6455,7 +6455,6 @@ console.log("start transform loop");
 Surface.prototype.stopTransformLoop = function(){
 	if(!this.transforming) return;
 
-console.log("stop transform loop");
 	this.transforming = false;
 	cancelAnimationFrame(this.animationRequestId);
 	this.emitter.emit("move stop");
@@ -6468,7 +6467,7 @@ Surface.prototype.transformStep = function(){
 	this.lastHorizontalDisplacement = lagScalar * (this.baseHorizontalVelocity + (this.horizontalVelocity * this.horizontalVelocityScalar));
 	this.lastVerticalDisplacement = lagScalar * (this.baseVerticalVelocity + (this.verticalVelocity * this.verticalVelocityScalar));
 	this.lastStepTime = currentTime;
-//console.log(this.lastHorizontalDisplacement, this.lastVerticalDisplacement);
+
 	if(this.lastHorizontalDisplacement || this.lastVerticalDisplacement){
 		this.horizontalPosition += this.lastHorizontalDisplacement;
 		this.verticalPosition += this.lastVerticalDisplacement;
@@ -6604,7 +6603,6 @@ Surface.prototype.pointerEventHandler = function(e){
 		x = pointer.clientX - this.left;
 		y = pointer.clientY - this.top;
 
-console.log("move", x, y);
 	this.horizontalVelocity = this.horizontalVelocityGradient(x - this.halfWidth, 0, (x > this.halfWidth? -1 : 1), this.halfWidth);
 	this.verticalVelocity = this.verticalVelocityGradient(y - this.halfHeight, 0, (y > this.halfHeight? -1 : 1), this.halfHeight);
 };
@@ -6657,7 +6655,7 @@ Surface.prototype.updateMultiAttributeStyle = function(styleName, attributes, wi
 			}
 		}
 	}
-	
+
 	this.element.style[styleName] = style;
 }
 

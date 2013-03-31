@@ -1,5 +1,7 @@
 # Collage is a Framework for Live Collages
 
+See a live example of Collage at work: [samelove.us](http://samelove.us).
+
 Collage brings together many public APIs, along with a method of presenting media within a limitless two-dimesional
 space to create memorable and meaningful experiences. It's a mixture between [Big Surface](https://github.com/ozanturgut/big-surface), 
 [Giant Quadtree](https://github.com/ozanturgut/giant-quadtree), and

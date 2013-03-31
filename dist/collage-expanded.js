@@ -928,7 +928,7 @@ var __m25 = function(module,exports){module.exports=exports;
     }
 }(this));
 ;return module.exports;}({},{});
-var __m24 = function(module,exports){module.exports=exports;
+var __m23 = function(module,exports){module.exports=exports;
 module.exports = Element;
 
 function Element(domElement, width, height){
@@ -937,6 +937,8 @@ function Element(domElement, width, height){
 	this.height = height || domElement.height || parseInt(domElement.clientHeight);
 	this.locations = [];
 	this.isVisible;
+	
+	this.element.style.position = "absolute";
 };
 
 Element.create = function(domElement, width, height){
@@ -1008,8 +1010,8 @@ Element.prototype.show = function(left, top){
 	this.isVisible = true;
 };
 ;return module.exports;}({},{});
-var __m20 = function(module,exports){module.exports=exports;
-var Element = __m24;
+var __m10 = function(module,exports){module.exports=exports;
+var Element = __m23;
 
 module.exports = IframeElement;
 
@@ -1028,7 +1030,7 @@ function IframeElement (element){
 	if(isiOS && this.isLocal){
 		this.iframe.contentDocument.body.style.webkitTransform = "translate3d(0, 0, 0)";
 	}
-
+	
 	this.hide();
 };
 IframeElement.prototype = Object.create(Element.prototype);
@@ -1071,8 +1073,8 @@ IframeElement.prototype.show = function(left, top){
 };
 
 ;return module.exports;}({},{});
-var __m21 = function(module,exports){module.exports=exports;
-var Element = __m24;
+var __m11 = function(module,exports){module.exports=exports;
+var Element = __m23;
 
 module.exports = SimpleElement;
 
@@ -1107,9 +1109,9 @@ SimpleElement.prototype.show = function(left, top, container){
 	}
 };
 ;return module.exports;}({},{});
-var __m22 = function(module,exports){module.exports=exports;
+var __m12 = function(module,exports){module.exports=exports;
 __m25;
-var Element = __m24;
+var Element = __m23;
 
 module.exports = VideoElement;
 
@@ -1263,9 +1265,9 @@ VideoElement.prototype.statusChangeHandler = function(status){
 }
 ;return module.exports;}({},{});
 var __m7 = function(module,exports){module.exports=exports;
-exports.Iframe = __m20;
-exports.Simple = __m21;
-exports.Video = __m22;
+exports.Iframe = __m10;
+exports.Simple = __m11;
+exports.Video = __m12;
 ;return module.exports;}({},{});
 var __m9 = function(module,exports){module.exports=exports;
 ;module.exports = (function(){
@@ -3274,9 +3276,9 @@ var qEndingLine = captureLine();
 });
 
 ;return module.exports;}({},{});
-var __m11 = function(module,exports){module.exports=exports;
+var __m14 = function(module,exports){module.exports=exports;
 var Q = __m8;
-var SimpleElement = __m21;
+var SimpleElement = __m11;
 
 var documentFragment = document.createDocumentFragment();
 
@@ -3297,9 +3299,9 @@ module.exports = function(collage, src){
 	return deferred.promise;
 };
 ;return module.exports;}({},{});
-var __m15 = function(module,exports){module.exports=exports;
+var __m18 = function(module,exports){module.exports=exports;
 var Q = __m8,
-	SimpleElement = __m21,
+	SimpleElement = __m11,
 	mustache = __m26;
 
 window.credits = window.credits || {};
@@ -3398,7 +3400,7 @@ function load(options){
 }
 
 ;return module.exports;}({},{});
-var __m23 = function(module,exports){module.exports=exports;
+var __m24 = function(module,exports){module.exports=exports;
 var Q = __m8;
 
 window.API_CALLBACKS = {};
@@ -3442,12 +3444,117 @@ module.exports = (function(){
 	}
 }());
 ;return module.exports;}({},{});
-var __m12 = function(module,exports){module.exports=exports;
+var __m16 = function(module,exports){module.exports=exports;
+var Q = __m8;
+var mustache = __m26;
+var getFromApi = __m24;
+var SimpleElement = __m11;
+	
+window.credits = window.credits || {};
+var credits = window.credits.googlePlus = {};
+
+module.exports = function(collage, query){
+	return queryActivities(query);
+};
+
+var ARTICLE_TEMPLATE = '' +
+'<div class="article-wrapper">' +
+	'<div class="post-attribution">' +
+		'<a href="{{authorUrl}}">' +
+			'{{#authorImage}}<img class="author-image" src="{{authorImage.src}}" width="{{authorImage.width}}" height="{{authorImage.height}}"/>{{/authorImage}}' +
+			'<span class="author-name">{{authorName}}</span>' +
+		'</a>' + 
+		'<span class="post-date">on Google Plus &ndash; {{date}}</span>' +
+	'</div>' +
+	'<p class="author-comments">{{{authorComments}}}</p>' + 
+	'<div class="article">' + 
+		'<a href="{{articleUrl}}">' +
+			'{{#image}}<img class="article-image" src="{{image.src}}" width="{{image.width}}" height="{{image.height}}"/>{{/image}}' + 
+			'<div class="article-attribution">' +
+				'<span>{{title}}</span>' + 
+			'</div>' + 
+		'</a>' +
+		'<p class="article-body">{{body}}</p>' +
+	'</div>' +
+'</div>';
+
+var documentFragment = document.createDocumentFragment();
+
+var queryActivities = (function(){
+	var endpoint = "https://www.googleapis.com/plus/v1/activities";
+
+	return function(query){
+		var params = [
+				"key=AIzaSyAZw0kviWeCOidthcZAYs5oCZ0k8DsOuUk",
+				"query=" + encodeURIComponent(query)
+			];
+		
+		return getFromApi(endpoint, params).then(function(response){
+			var elements = [];
+
+			response.items.forEach(function(item){
+				if(!(item && item.object && item.object.attachments && item.object.attachments.length > 0)) return;
+				var article = item.object.attachments[0];
+				if(article.objectType !== "article") return;
+
+				var actor = item.object.actor || item.actor,
+					authorComments = item.object.content;
+				if(authorComments && authorComments.length > 150){
+					authorComments = authorComments.substr(0, 150) + "&hellip;";
+				}
+
+				var templateParams = {
+					authorName: actor.displayName,
+					authorUrl: actor.url,
+					authorId: actor.id,
+					date: new Date(item.published).toLocaleDateString(),
+					authorComments: authorComments,
+					articleUrl: article.url,
+					title: article.displayName,
+					body: article.content
+				};
+								
+				if(actor.image){
+					templateParams.authorImage = {
+						src: actor.image.url,
+						width: 50,
+						height: 50
+					};
+				}
+
+				if(article.image){
+					templateParams.image = {
+						src: article.image.url,
+						width: article.image.width,
+						height: article.image.height
+					};
+				}
+				
+				var element = document.createElement("div");
+				element.className = "gplus-article";
+				element.innerHTML = mustache.render(ARTICLE_TEMPLATE, templateParams);
+				document.body.appendChild(element);
+				
+				element.width = element.clientWidth;
+				element.height = element.clientHeight;
+
+				elements.push(new SimpleElement(element));
+				documentFragment.appendChild(element);
+
+			});
+
+			return elements;
+		});
+	};
+}());
+
+;return module.exports;}({},{});
+var __m15 = function(module,exports){module.exports=exports;
 __m25;
 
 var Q = __m8;
-var VideoElement = __m22;
-var getFromApi = __m23;
+var VideoElement = __m12;
+var getFromApi = __m24;
 var TIMEOUT = 10 * 1000;
 
 window.credits = window.credits || {};
@@ -3478,8 +3585,8 @@ var defaults = {
 };
 
 var queryVideos = (function(){
-	//var endpoint = "https://www.googleapis.com/youtube/v3/search";
-	var endpoint = "https://d3ggoqbhpexke2.cloudfront.net/youtube/v3/search";
+	var endpoint = "https://www.googleapis.com/youtube/v3/search";
+	//var endpoint = "https://d3ggoqbhpexke2.cloudfront.net/youtube/v3/search";
 
 	return function(options){
 		utils.extend(options, defaults);
@@ -3613,119 +3720,14 @@ var loadVideo = (function(){
 }());
 
 ;return module.exports;}({},{});
-var __m13 = function(module,exports){module.exports=exports;
-var Q = __m8;
-var mustache = __m26;
-var getFromApi = __m23;
-var SimpleElement = __m21;
-	
-window.credits = window.credits || {};
-var credits = window.credits.googlePlus = {};
-
-module.exports = function(collage, query){
-	return queryActivities(query);
-};
-
-var ARTICLE_TEMPLATE = '' +
-'<div class="article-wrapper">' +
-	'<div class="post-attribution">' +
-		'<a href="{{authorUrl}}">' +
-			'{{#authorImage}}<img class="author-image" src="{{authorImage.src}}" width="{{authorImage.width}}" height="{{authorImage.height}}"/>{{/authorImage}}' +
-			'<span class="author-name">{{authorName}}</span>' +
-		'</a>' + 
-		'<span class="post-date">on Google Plus &ndash; {{date}}</span>' +
-	'</div>' +
-	'<p class="author-comments">{{{authorComments}}}</p>' + 
-	'<div class="article">' + 
-		'<a href="{{articleUrl}}">' +
-			'{{#image}}<img class="article-image" src="{{image.src}}" width="{{image.width}}" height="{{image.height}}"/>{{/image}}' + 
-			'<div class="article-attribution">' +
-				'<span>{{title}}</span>' + 
-			'</div>' + 
-		'</a>' +
-		'<p class="article-body">{{body}}</p>' +
-	'</div>' +
-'</div>';
-
-var documentFragment = document.createDocumentFragment();
-
-var queryActivities = (function(){
-	var endpoint = "https://www.googleapis.com/plus/v1/activities";
-
-	return function(query){
-		var params = [
-				"key=AIzaSyAZw0kviWeCOidthcZAYs5oCZ0k8DsOuUk",
-				"query=" + encodeURIComponent(query)
-			];
-		
-		return getFromApi(endpoint, params).then(function(response){
-			var elements = [];
-
-			response.items.forEach(function(item){
-				if(!(item && item.object && item.object.attachments && item.object.attachments.length > 0)) return;
-				var article = item.object.attachments[0];
-				if(article.objectType !== "article") return;
-
-				var actor = item.object.actor || item.actor,
-					authorComments = item.object.content;
-				if(authorComments && authorComments.length > 150){
-					authorComments = authorComments.substr(0, 150) + "&hellip;";
-				}
-
-				var templateParams = {
-					authorName: actor.displayName,
-					authorUrl: actor.url,
-					authorId: actor.id,
-					date: new Date(item.published).toLocaleDateString(),
-					authorComments: authorComments,
-					articleUrl: article.url,
-					title: article.displayName,
-					body: article.content
-				};
-								
-				if(actor.image){
-					templateParams.authorImage = {
-						src: actor.image.url,
-						width: 50,
-						height: 50
-					};
-				}
-
-				if(article.image){
-					templateParams.image = {
-						src: article.image.url,
-						width: article.image.width,
-						height: article.image.height
-					};
-				}
-				
-				var element = document.createElement("div");
-				element.className = "gplus-article";
-				element.innerHTML = mustache.render(ARTICLE_TEMPLATE, templateParams);
-				document.body.appendChild(element);
-				
-				element.width = element.clientWidth;
-				element.height = element.clientHeight;
-
-				elements.push(new SimpleElement(element));
-				documentFragment.appendChild(element);
-
-			});
-
-			return elements;
-		});
-	};
-}());
-
-;return module.exports;}({},{});
-var __m14 = function(module,exports){module.exports=exports;
+var __m17 = function(module,exports){module.exports=exports;
 // This one is a bit questionable since it's deprecated, and the TOS for use in
 // collages is unclear.
 
 var Q = __m8;
 var mustache = __m26;
-var getFromApi = __m23;
-var SimpleElement = __m21;
+var getFromApi = __m24;
+var SimpleElement = __m11;
 	
 window.credits = window.credits || {};
 var credits = window.credits.googleNews = {};
@@ -3753,8 +3755,8 @@ var ARTICLE_TEMPLATE = '' +
 var documentFragment = document.createDocumentFragment();
 
 var search = (function(){
-	//var endpoint = "https://ajax.googleapis.com/ajax/services/search/news";
-	var endpoint = "/ajax/services/search/news";
+	var endpoint = "https://ajax.googleapis.com/ajax/services/search/news";
+	//var endpoint = "/ajax/services/search/news";
 
 	return function(query){
 		var params = [
@@ -3957,17 +3959,17 @@ exports.transitionAttribute =	(bodyStyle.msTransition !== void 0) && "msTransiti
 								(bodyStyle.transition !== void 0) && "transition";
 
 ;return module.exports;}({},{});
-var __m10 = function(module,exports){module.exports=exports;
+var __m13 = function(module,exports){module.exports=exports;
 var Q = __m8,
-	SimpleElement = __m21,
+	SimpleElement = __m11,
 	utils = __m3,
-	getFromApi = __m23;
+	getFromApi = __m24;
 
 window.credits = window.credits || {};
 var credits = window.credits.flickr = {};
 
-//var endpoint = "http://api.flickr.com/services/rest/";
-var endpoint = "/services/rest/";
+var endpoint = "http://api.flickr.com/services/rest/";
+//var endpoint = "/services/rest/";
 
 module.exports = getPhotos;
 
@@ -4060,13 +4062,13 @@ function loadImage(src){
 	return deferred.promise;
 };
 ;return module.exports;}({},{});
-var __m16 = function(module,exports){module.exports=exports;
+var __m19 = function(module,exports){module.exports=exports;
 // This uses an undocumented twitter api (twttr.widget.createTweet) so it might break
 
 var Q = __m8,
-	getFromApi = __m23,	
+	getFromApi = __m24,	
 	utils = __m3,
-	IframeElement = __m20;
+	IframeElement = __m10;
 
 var TIMEOUT = 1000 * 10;
 
@@ -4172,8 +4174,8 @@ var loadTweets = (function(){
 }());
 
 var queryTweets = (function(){
-	//var endpoint = "http://search.twitter.com/search.json";
-	var endpoint = "/search.json";
+	var endpoint = "http://search.twitter.com/search.json";
+	//var endpoint = "/search.json";
 
 	return function(query){
 		return getFromApi(endpoint, [
@@ -4206,20 +4208,22 @@ var queryTweets = (function(){
 	};
 }());
 ;return module.exports;}({},{});
-var __m17 = function(module,exports){module.exports=exports;
+var __m20 = function(module,exports){module.exports=exports;
 var Q = __m8,
-	getFromApi = __m23,
-	IframeElement = __m20,
+	getFromApi = __m24,
+	IframeElement = __m10,
 	mustache = __m26,
 	utils = __m3;
 
-//var endpoint = "https://graph.facebook.com/search";
-var endpoint = "/search";
+var endpoint = "https://graph.facebook.com/search";
+//var endpoint = "/search";
 
 window.credits = window.credits || {};
 var credits = window.credits.facebook = {};
 
 module.exports = function(collage, options){
+	if(!options.type) options.type = "pages";
+	
 	switch(options.type){
 		case "pages":
 			return createPages(collage, options)
@@ -4291,9 +4295,9 @@ function loadLikeBoxes(collage, ids, options){
 }
 
 ;return module.exports;}({},{});
-var __m18 = function(module,exports){module.exports=exports;
+var __m21 = function(module,exports){module.exports=exports;
 var Q = __m8,
-	IframeElement = __m20,
+	IframeElement = __m10,
 	utils = __m3;
 
 module.exports = function(collage, options){
@@ -4309,18 +4313,18 @@ module.exports = function(collage, options){
 };
 
 ;return module.exports;}({},{});
-var __m19 = function(module,exports){module.exports=exports;
+var __m22 = function(module,exports){module.exports=exports;
 var Q = __m8,
-	SimpleElement = __m21,
-	IframeElement = __m20,
+	SimpleElement = __m11,
+	IframeElement = __m10,
 	utils = __m3,
-	getFromApi = __m23;
+	getFromApi = __m24;
 
 window.credits = window.credits || {};
 var credits = window.credits.reddit = {};
 
-//var endpoint = "http://www.reddit.com/r/all/search.json";
-var endpoint = "/r/all/search.json";
+var endpoint = "http://www.reddit.com/r/all/search.json";
+//var endpoint = "/r/all/search.json";
 
 module.exports = function(collage, options){
 	if(options.type === "embed"){
@@ -4451,16 +4455,16 @@ function loadImage(src){
 };
 ;return module.exports;}({},{});
 var __m6 = function(module,exports){module.exports=exports;
-exports.flickr = __m10;
-exports.image = __m11;
-exports.youtube = __m12;
-exports.googlePlus = __m13;
-exports.googleNews = __m14;
-exports.nyTimes = __m15;
-exports.twitter = __m16;
-exports.facebook = __m17;
-exports.iframe = __m18;
-exports.reddit = __m19;
+exports.flickr = __m13;
+exports.image = __m14;
+exports.youtube = __m15;
+exports.googlePlus = __m16;
+exports.googleNews = __m17;
+exports.nyTimes = __m18;
+exports.twitter = __m19;
+exports.facebook = __m20;
+exports.iframe = __m21;
+exports.reddit = __m22;
 ;return module.exports;}({},{});
 var __m2 = function(module,exports){module.exports=exports;
 ;module.exports = (function(){
@@ -6440,7 +6444,7 @@ Surface.prototype.refit = function(){
 
 Surface.prototype.startTransformLoop = function(){
 	if(this.transforming) return;
-
+console.log("start transform loop");
 	this.transforming = true;
 	this.lastStepTime = Date.now();
 	this.animationRequestId = requestAnimationFrame(this.transformStep);
@@ -6451,6 +6455,7 @@ Surface.prototype.startTransformLoop = function(){
 Surface.prototype.stopTransformLoop = function(){
 	if(!this.transforming) return;
 
+console.log("stop transform loop");
 	this.transforming = false;
 	cancelAnimationFrame(this.animationRequestId);
 	this.emitter.emit("move stop");
@@ -6463,7 +6468,7 @@ Surface.prototype.transformStep = function(){
 	this.lastHorizontalDisplacement = lagScalar * (this.baseHorizontalVelocity + (this.horizontalVelocity * this.horizontalVelocityScalar));
 	this.lastVerticalDisplacement = lagScalar * (this.baseVerticalVelocity + (this.verticalVelocity * this.verticalVelocityScalar));
 	this.lastStepTime = currentTime;
-	
+//console.log(this.lastHorizontalDisplacement, this.lastVerticalDisplacement);
 	if(this.lastHorizontalDisplacement || this.lastVerticalDisplacement){
 		this.horizontalPosition += this.lastHorizontalDisplacement;
 		this.verticalPosition += this.lastVerticalDisplacement;
@@ -6599,6 +6604,7 @@ Surface.prototype.pointerEventHandler = function(e){
 		x = pointer.clientX - this.left;
 		y = pointer.clientY - this.top;
 
+console.log("move", x, y);
 	this.horizontalVelocity = this.horizontalVelocityGradient(x - this.halfWidth, 0, (x > this.halfWidth? -1 : 1), this.halfWidth);
 	this.verticalVelocity = this.verticalVelocityGradient(y - this.halfHeight, 0, (y > this.halfHeight? -1 : 1), this.halfHeight);
 };
@@ -6651,7 +6657,7 @@ Surface.prototype.updateMultiAttributeStyle = function(styleName, attributes, wi
 			}
 		}
 	}
-
+	
 	this.element.style[styleName] = style;
 }
 

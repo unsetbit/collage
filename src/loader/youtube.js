@@ -33,8 +33,8 @@ var defaults = {
 };
 
 var queryVideos = (function(){
-	//var endpoint = "https://www.googleapis.com/youtube/v3/search";
-	var endpoint = "https://d3ggoqbhpexke2.cloudfront.net/youtube/v3/search";
+	var endpoint = "https://www.googleapis.com/youtube/v3/search";
+	//var endpoint = "https://d3ggoqbhpexke2.cloudfront.net/youtube/v3/search";
 
 	return function(options){
 		utils.extend(options, defaults);

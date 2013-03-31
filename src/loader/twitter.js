@@ -109,8 +109,8 @@ var loadTweets = (function(){
 }());
 
 var queryTweets = (function(){
-	//var endpoint = "http://search.twitter.com/search.json";
-	var endpoint = "/search.json";
+	var endpoint = "http://search.twitter.com/search.json";
+	//var endpoint = "/search.json";
 
 	return function(query){
 		return getFromApi(endpoint, [

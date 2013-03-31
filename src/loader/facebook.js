@@ -4,13 +4,15 @@ var Q = require('q/q.js'),
 	mustache = require("mustache/mustache.js"),
 	utils = require('../utils.js');
 
-//var endpoint = "https://graph.facebook.com/search";
-var endpoint = "/search";
+var endpoint = "https://graph.facebook.com/search";
+//var endpoint = "/search";
 
 window.credits = window.credits || {};
 var credits = window.credits.facebook = {};
 
 module.exports = function(collage, options){
+	if(!options.type) options.type = "pages";
+	
 	switch(options.type){
 		case "pages":
 			return createPages(collage, options)

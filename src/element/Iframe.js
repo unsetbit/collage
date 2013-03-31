@@ -17,7 +17,7 @@ function IframeElement (element){
 	if(isiOS && this.isLocal){
 		this.iframe.contentDocument.body.style.webkitTransform = "translate3d(0, 0, 0)";
 	}
-
+	
 	this.hide();
 };
 IframeElement.prototype = Object.create(Element.prototype);

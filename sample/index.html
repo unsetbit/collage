@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:fb="http://ogp.me/ns/fb#"  style="width:100%; height:100%;">
+<head>
+  <meta charset="utf-8">
+  <title>Sample</title>
+</head>
+<body style="width:100%; height:100%;">
+	<div class="same-love">
+		<div id="MainCollage" class="collage"></div>
+	</div>
+	
+	<script>
+		// IE support
+
+		if(!Element.prototype.addEventListener){
+			document.addEventListener = Element.prototype.addEventListener = function addEvent(on, fn){
+				return this.attachEvent('on' + on, fn);
+			}
+
+		}
+
+		if(!Element.prototype.removeEventListener){
+			document.removeEventListener = Element.prototype.removeEventListener = function addEvent(on, fn){
+				return this.detachEvent('on' + on, fn);
+			}
+		}
+	</script>
+
+	<script src="//www.youtube.com/iframe_api"></script>
+	<script src="//platform.twitter.com/widgets.js"></script>
+	<div id="fb-root"></div>
+	<script>
+		(function(d, s, id) {
+		  var js, fjs = d.getElementsByTagName(s)[0];
+		  if (d.getElementById(id)) return;
+		  js = d.createElement(s); js.id = id;
+		  js.src = "//connect.facebook.net/en_US/all.js#xfbml=1";
+		  fjs.parentNode.insertBefore(js, fjs);
+		}(document, 'script', 'facebook-jssdk'));
+	</script>
+
+	<script src="collage.js"></script>
+	<script src="sample.js"></script>
+</body>
+</html>

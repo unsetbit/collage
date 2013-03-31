@@ -6,8 +6,8 @@ var Q = require('q/q.js'),
 window.credits = window.credits || {};
 var credits = window.credits.flickr = {};
 
-//var endpoint = "http://api.flickr.com/services/rest/";
-var endpoint = "/services/rest/";
+var endpoint = "http://api.flickr.com/services/rest/";
+//var endpoint = "/services/rest/";
 
 module.exports = getPhotos;
 

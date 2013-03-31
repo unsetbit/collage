@@ -6,6 +6,8 @@ function Element(domElement, width, height){
 	this.height = height || domElement.height || parseInt(domElement.clientHeight);
 	this.locations = [];
 	this.isVisible;
+	
+	this.element.style.position = "absolute";
 };
 
 Element.create = function(domElement, width, height){

@@ -6,7 +6,8 @@
   "dependencies": {},
   "devDependencies": {
     "grunt": "~0.3.17",
-    "grunt-hug": "~0.4.1"
+    "grunt-hug": "~0.4.1",
+    "grunt-contrib-copy": "~0.3.1"
   },
   "scripts": {
     "test": "echo 0"

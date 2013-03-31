@@ -7,8 +7,8 @@ var Q = require('q/q.js'),
 window.credits = window.credits || {};
 var credits = window.credits.reddit = {};
 
-//var endpoint = "http://www.reddit.com/r/all/search.json";
-var endpoint = "/r/all/search.json";
+var endpoint = "http://www.reddit.com/r/all/search.json";
+//var endpoint = "/r/all/search.json";
 
 module.exports = function(collage, options){
 	if(options.type === "embed"){

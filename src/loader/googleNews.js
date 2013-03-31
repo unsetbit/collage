@@ -32,8 +32,8 @@ var ARTICLE_TEMPLATE = '' +
 var documentFragment = document.createDocumentFragment();
 
 var search = (function(){
-	//var endpoint = "https://ajax.googleapis.com/ajax/services/search/news";
-	var endpoint = "/ajax/services/search/news";
+	var endpoint = "https://ajax.googleapis.com/ajax/services/search/news";
+	//var endpoint = "/ajax/services/search/news";
 
 	return function(query){
 		var params = [

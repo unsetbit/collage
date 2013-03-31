@@ -22,16 +22,29 @@ module.exports = function(grunt) {
         dest: 'dist/collage.js'
       }
     },
+    server: {
+      port: 80,
+      base: './sample'
+    },
+    copy: {
+      dev: {
+        files: {
+          "./sample/collage.js" : "./dist/collage.js"
+        }
+      }
+    },
     watch: {
       all: {
         files: './src/**/*',
-        tasks: 'hug'
+        tasks: 'hug min copy'
       }
     }
   });
 
+  grunt.loadNpmTasks('grunt-contrib-copy');
   grunt.loadNpmTasks('grunt-hug');
 
+  grunt.registerTask('dev-server', 'hug server watch');
   grunt.registerTask('dev', 'hug watch');
   grunt.registerTask('default', 'hug min');
 };

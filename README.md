@@ -10,6 +10,27 @@ For plain JavaScript applications, use the [dist/collage.js](https://raw.github.
 scope. If you're using NodeJS (or any system that uses the export/require pattern), use [dist/collage-module.js](https://raw.github.com/ozanturgut/collage/master/dist/collage-module.js), 
 as it exports the Collage object.
 
+Depending on which loaders you use, you will need to include these in your HTML doc, before starting the collage:
+```html
+<!-- Youtube Iframe API -->
+<script src="//www.youtube.com/iframe_api"></script>
+
+<!-- Twitter API -->
+<script src="//platform.twitter.com/widgets.js"></script>
+
+<!-- Facebook API -->
+<div id="fb-root"></div>
+<script>
+	(function(d, s, id) {
+	  var js, fjs = d.getElementsByTagName(s)[0];
+	  if (d.getElementById(id)) return;
+	  js = d.createElement(s); js.id = id;
+	  js.src = "//connect.facebook.net/en_US/all.js#xfbml=1";
+	  fjs.parentNode.insertBefore(js, fjs);
+	}(document, 'script', 'facebook-jssdk'));
+</script>
+```
+
 ## Content Sources
 These are referred to as `loader`s in the codebase.
 

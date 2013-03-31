@@ -12,7 +12,7 @@ a public API library.
 For plain JavaScript applications, use the [dist/collage.js](https://raw.github.com/ozanturgut/collage/master/dist/collage.js), 
 which will inject the Collage module object to the global scope (i.e. it creates window.Collage). 
 If you're using NodeJS (or any system that uses the export/require pattern), use [dist/collage-module.js](https://raw.github.com/ozanturgut/collage/master/dist/collage-module.js), 
-as it exports the Collage object.
+it exports the Collage module object.
 
 Depending on which loaders you use, you will need to include these in your HTML doc, before starting the collage:
 ```html

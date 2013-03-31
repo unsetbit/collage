@@ -62,10 +62,12 @@ var collage = Collage.create(document.body);
 collage.load('some fb content', 'facebook', {
     minLikes: 200,
     query: 'popcorn'
+}).then(function(){
+	// Wait for the loading to be finished, then
+	// start the collage (filling the center) and set the active tags
+	collage.start('some fb content');
+	collage.speed(8);
 });
-// Start the collage (filling the center) and set the active tags
-collage.start('some fb content');
-collage.speed(8);
 ```
 
 ### `collage.load(tagName, loaderMap)`
@@ -88,11 +90,12 @@ collage.load('my content', {
     { query: 'popcorn' },
     { query: 'caramel' }
   ]
+}).then(function(){
+	// Wait for the loading to be finished, then
+	// start the collage (filling the center) and set the active tags
+	collage.start('my content');
+	collage.speed(8);
 });
-
-// Start the collage (filling the center) and set the active tags
-collage.start('my content');
-collage.speed(8);
 ```
 
 ### `collage.start(opt_var_args)`
@@ -152,21 +155,23 @@ var collage = Collage.create(document.body);
 collage.load('some fb content', 'facebook', {
     minLikes: 200,
     query: 'one man one woman'
+}).then(function(){ // wait for the first batch to complete loading
+	collage.load('more fb content', {
+	  facebook: [{    
+	      minLikes: 200,
+	      query: 'popcorn'
+	   },
+	   {
+	      ids: ["110452248983275"]
+	   }]
+	}).then(function(){
+		// Wait for the loading to be finished, then
+		// start the collage (filling the center) and set the active tags
+		collage.start('some fb content', 'more fb content');
+		collage.speed(8);
+	});	
 });
 
-collage.load('more fb content', {
-  facebook: [{    
-      minLikes: 200,
-      query: 'popcorn'
-   },
-   {
-      ids: ["110452248983275"]
-   }]
-});
-
-// Start the collage (filling the center) and set the active tags
-collage.start('some fb content', 'more fb content');
-collage.speed(8);
 ```
 
 ### Reddit
@@ -194,11 +199,12 @@ reddit: [
   	type: "embed",
   	query: "popcorn"
   }]
+}).then(function(){
+	// Wait for the loading to be finished, then
+	// start the collage (filling the center) and set the active tags
+	collage.start('reddit popcorn');
+	collage.speed(8);        
 });
-
-// Start the collage (filling the center) and set the active tags
-collage.start('reddit popcorn');
-collage.speed(8);        
 ```
 
 ### Twitter
@@ -214,11 +220,12 @@ collage.load('popcorn', {
  twitter: [
   	{ query: "popcorn"}
   ],
+}).then(function(){
+	// Wait for the loading to be finished, then
+	// start the collage (filling the center) and set the active tags
+	collage.start('popcorn');
+	collage.speed(8);        
 });
-
-// Start the collage (filling the center) and set the active tags
-collage.start('popcorn');
-collage.speed(8);        
 ```
 
 ### Youtube
@@ -257,11 +264,12 @@ collage.load('popcorn', {
   		startTime: 108
   	}
   ]
+}).then(function(){
+	// Wait for the loading to be finished, then
+	// start the collage (filling the center) and set the active tags
+	collage.start('popcorn');
+	collage.speed(8);        
 });
-
-// Start the collage (filling the center) and set the active tags
-collage.start('popcorn');
-collage.speed(8);        
 ```
 
 ### Flickr
@@ -284,11 +292,12 @@ collage.load('popcorn', {
 			sort: "interestingness-desc"
 		}
   ],
+}).then(function(){
+	// Wait for the loading to be finished, then
+	// start the collage (filling the center) and set the active tags
+	collage.start('popcorn');
+	collage.speed(8);        
 });
-
-// Start the collage (filling the center) and set the active tags
-collage.start('popcorn');
-collage.speed(8);        
 ```
 ### Google News
 Adds news articles from Google News to the collage.
@@ -298,11 +307,12 @@ The loader only accepts a string query.
 ```javascript
 collage.load('popcorn', {
   googleNews: ["popcorn"]
+}).then(function(){
+	// Wait for the loading to be finished, then
+	// start the collage (filling the center) and set the active tags
+	collage.start('popcorn');
+	collage.speed(8);        
 });
-
-// Start the collage (filling the center) and set the active tags
-collage.start('popcorn');
-collage.speed(8);        
 ```
 
 ### Google Plus
@@ -313,11 +323,12 @@ The loader only accepts a string query.
 ```javascript
 collage.load('popcorn', {
   googlePlus: ["popcorn"]
+}).then(function(){
+	// Wait for the loading to be finished, then
+	// start the collage (filling the center) and set the active tags
+	collage.start('popcorn');
+	collage.speed(8);        
 });
-
-// Start the collage (filling the center) and set the active tags
-collage.start('popcorn');
-collage.speed(8);        
 ```
 
 ### New York Times
@@ -330,14 +341,15 @@ Choose one:
 
 ```javascript
 collage.load('popcorn', {
-		nyTimes: [{
-			query: "popcorn+nytd_des_facet%3A%5BHate+Crimes%5D"
-		}]
+	nyTimes: [{
+		query: "popcorn+nytd_des_facet%3A%5BHate+Crimes%5D"
+	}]
+}).then(function(){
+	// Wait for the loading to be finished, then
+	// start the collage (filling the center) and set the active tags
+	collage.start('popcorn');
+	collage.speed(8);        
 });
-
-// Start the collage (filling the center) and set the active tags
-collage.start('popcorn');
-collage.speed(8);        
 ```
 
 ### Iframe
@@ -355,11 +367,12 @@ collage.load('popcorn', {
 				width: 800,
 				height: 600
 			}]
+}).then(function(){
+	// Wait for the loading to be finished, then
+	// start the collage (filling the center) and set the active tags
+	collage.start('popcorn');
+	collage.speed(8);        
 });
-
-// Start the collage (filling the center) and set the active tags
-collage.start('popcorn');
-collage.speed(8);        
 ```
 
 ### Image
@@ -370,9 +383,10 @@ The loader only accepts a string src.
 ```javascript
 collage.load('popcorn', {
   image: ["http://www.popcorn.com/popcorn.jpg"]
+}).then(function(){
+	// Wait for the loading to be finished, then
+	// start the collage (filling the center) and set the active tags
+	collage.start('popcorn');
+	collage.speed(8);        
 });
-
-// Start the collage (filling the center) and set the active tags
-collage.start('popcorn');
-collage.speed(8);        
 ```

@@ -1,4 +1,4 @@
-# Collage is a Framework for Futuristic Collages
+# Collage is a Framework for Live Collages
 
 Collage brings together many public APIs, along with a method of presenting media within a limitless two-dimesional
 space to create memorable and meaningful experiences. It's a mixture between [Big Surface](https://github.com/ozanturgut/big-surface), 

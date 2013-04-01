@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>Collage.js</title>
+    <link rel="shortcut icon" href="logo.png" />
+    <link rel="stylesheet" href="styles/bootstrap.min.css">
+    <script src="scripts/scale.fix.js"></script>
+    <meta name="viewport" content="width=820, initial-scale=auto, user-scalable=yes">
+    <!--[if lt IE 9]>
+    <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+  </head>
+  <body>
+    <a href="https://github.com/ozanturgut/collage"><img style="position: fixed; top: 0; right: 0; border: 0;" src="https://s3.amazonaws.com/github/ribbons/forkme_right_gray_6d6d6d.png" alt="Fork me on GitHub"></a>
+    <div class="container-fluid" style="width:900px">
+      <div class="row-fluid">
+        <div class="span5"><a href="https://github.com/ozanturgut/collage"><img id="logo" src="logo.png"/></a></div>
+        <div class="span7" style="margin-top:100px;"><h1><a href="https://github.com/ozanturgut/collage">Collage.js</a></h1> <h2 class="muted">Framework for creating live, dynamic, and interactive collages.</h2></div>
+      </div>
+      <div class="row-fluid" style="margin-top:20px;">
+        <p class="lead">
+          Collage.js brings together many public APIs, along a method of presenting media within a 
+          limitless two-dimesional space to create memorable experiences.
+        </p>
+        <h3>An example</h3>
+        <p>This example</p>
+        <h3>Integrated APIs</h3>
+        <p>
+          <ul>
+            <li>Facebook (like boxes)</li>
+            <li>Reddit (images and embeds)</li>
+            <li>Twitter (tweets)</li>
+            <li>Youtube (videos)</li>
+            <li>Flickr (images)</li>
+            <li>New York Times (articles)</li>
+            <li>Google News (articles)</li>
+            <li>Google Plus (posts)</li>
+          </ul>
+        </p>
+      </div>
+    </div>
+
+    <div id="body">
+        <h3>Framework for live, dynamic, and interactive collages.</h3>
+        <p>
+        </p>
+        <p>
+          Now imagine your friends are browsers, and the game is a script which tells browsers 
+          how to play, and waits for the right number to be guessed. This makes you the Queen Server.
+          The Queen Servers allows you to perform distributed tasks on many browsers -- a platform for
+          running scripts on many browsers.
+        </p>
+        <p>
+          Let's run the example:
+
+          <ol>
+            <li>Install <a href="http://nodejs.org/">Node.js</a> version 0.8 or higher</li>
+            <li>In your terminal, run: <pre><span id="sudo">sudo </span>npm install -g queen</pre></li>
+            <li>Run: <pre>queen -c localhost:9300 <a href="http://queenjs.com/server-example.js">http://queenjs.com/server-example.js</a></pre></li>
+            <li><a href="http://localhost:9300/" target="_blank">Click here</a> and watch your terminal.</li>
+          </ol>
+        </p>
+        <p>
+          Here's what happened:
+          <ol>
+            <li>You installed software that allows you to run JavaScript code through the command line.</li>
+            <li>You installed queen using a package manager that comes with Node.</li>
+            <li>You asked queen to start capturing browsers on localhost port 9300 and run <a href="http://queenjs.com/server-example.js">this server-side queen script</a>.</li>
+            <li>You pointed your browser to the queen server, allowing queen to push code that the server-side script requested to run on browsers (the "client-side script"). When <a href="http://queenjs.com/client-example.js">this client-side script</a> loaded, it started reporting back to the server-side script random number guesses. Once the server-side script saw the correct number, it ended the process.</li>
+          </ol>
+        <p>
+
+        <h3>It's not for guessing numbers</h3>
+        <p>
+          Queen is a server which captures browsers and then is able to push scripts to them to run in a clean context
+          (an iframe). Here are somethings it can do out of the box:
+
+          <ul>
+            <li>Bidirectional communication between your client-side and server-side script (using <a href="http://socket.io/">socket.io</a>).</li>
+            <li>Run scripts on browsers connected to a central Queen server remotely using a thin-client (<a href="https://github.com/ozanturgut/queen-remote">queen-remote</a>).</li>
+            <li>Connect browsers automatically using <a href="http://seleniumhq.org/">Selenium</a>, <a href="http://www.browserstack.com">BrowserStack</a>, or <a href="https://saucelabs.com/">SauceLabs</a>.</li>
+            <li>Automatically detects and recovers unresponsive browsers.</li>
+            <li>Target browsers based on browser type/version, operating system, or capabilities (anything <a href="http://modernizr.com/">Modernizr</a> can detect).</li>
+            <li>Run scripts via command line, configuration file, or import Queen into your own project as a library.</li>
+            <li>Can run lists of scripts or an HTML files.</li>
+            <li><a href="monitor.png">Monitoring</a> of connected browsers and active jobs.</li>
+          </ul>
+        </p>
+        
+        <p>Queen is the foundation of <a href="http://thrilljs.com">Thrill</a>, a test runner for web applications.
+
+        <h3>Rule your Browser Kingdom</h3>
+        <p>
+          Queen bears the Apache License 2.0. <a href="https://github.com/ozanturgut/queen/wiki/Hacking-Queen">Read this to get starting on hacking queen</a>. Your contributions are welcome at <a href="https://github.com/ozanturgut/queen">GitHub</a>.</p>
+        <div id="credit">
+          Created by <a href="https://github.com/ozanturgut">Ozan</a> at <a href="http://www.turn.com/platform">Turn</a>.
+        </div>
+    </div>
+    <script>
+      if(~navigator.userAgent.indexOf("Windows")){
+        document.getElementById('sudo').innerText = "";
+      }
+    </script>
+    <!--[if !IE]><script>fixScale(document);</script><![endif]-->
+        <script type="text/javascript">
+      var gaJsHost = (("https:" == document.location.protocol) ? "https://ssl." : "http://www.");
+      document.write(unescape("%3Cscript src='" + gaJsHost + "google-analytics.com/ga.js' type='text/javascript'%3E%3C/script%3E"));
+    </script>
+    <script type="text/javascript">
+      try {
+        var pageTracker = _gat._getTracker("UA-4017245-7");
+      pageTracker._trackPageview();
+      } catch(err) {}
+    </script>
+    <script src="scripts/bootstrap.min.js"></script>
+    
+  </body>
+</html>

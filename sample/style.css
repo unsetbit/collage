@@ -1,0 +1,45 @@
+.gnews-article{
+	width: 400px;
+	background-color:white;
+}	
+.gnews-article b{
+	font-weight:normal;
+}
+
+.gnews-article a{
+	text-decoration: none;
+}
+
+.gnews-article a:hover{
+	text-decoration: underline;
+}
+
+.gnews-article .article-wrapper{
+	padding:20px;
+}
+
+.gnews-article .article-title{
+	font-size:20px;
+	margin-bottom:10px;
+}
+
+.gnews-article .article-image{
+	float:left;
+	margin-right:10px;
+	margin-bottom:10px;
+}
+
+.gnews-article .article-attribution{
+	font-size:11px;
+	color:#808080;
+	margin-bottom:10px;
+}
+
+.gnews-article .article-attribution a{
+	color:#808080;			
+}
+
+.gnews-article .article-body{
+	clear:both;
+}
+

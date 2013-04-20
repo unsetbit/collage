@@ -17,7 +17,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/ozanturgut/collage.git"
+    "url": "https://github.com/oztu/collage.git"
   },
   "keywords": [],
   "author": {
@@ -28,7 +28,7 @@
   "licenses": [
     {
       "type": "Apache License 2.0",
-      "url": "https://github.com/ozanturgut/collage/blob/master/LICENSE-APACHE2"
+      "url": "https://github.com/oztu/collage/blob/master/LICENSE-APACHE2"
     }
   ]
 }

@@ -4,14 +4,14 @@ See a live example of Collage at work: [samelove.us](http://samelove.us).
 
 
 Collage brings together many public APIs, along with a method of presenting media within a limitless two-dimesional
-space to create memorable and meaningful experiences. It's a mixture between [Big Surface](https://github.com/ozanturgut/big-surface), 
-[Giant Quadtree](https://github.com/ozanturgut/giant-quadtree), and
+space to create memorable and meaningful experiences. It's a mixture between [Big Surface](https://github.com/oztu/big-surface), 
+[Giant Quadtree](https://github.com/oztu/giant-quadtree), and
 a public API library.
 
 ## Use
-For plain JavaScript applications, use the [dist/collage.js](https://raw.github.com/ozanturgut/collage/master/dist/collage.js), 
+For plain JavaScript applications, use the [dist/collage.js](https://raw.github.com/oztu/collage/master/dist/collage.js), 
 which will inject the Collage module object to the global scope (i.e. it creates window.Collage). 
-If you're using NodeJS (or any system that uses the export/require pattern), use [dist/collage-module.js](https://raw.github.com/ozanturgut/collage/master/dist/collage-module.js), 
+If you're using NodeJS (or any system that uses the export/require pattern), use [dist/collage-module.js](https://raw.github.com/oztu/collage/master/dist/collage-module.js), 
 it exports the Collage module object.
 
 Depending on which loaders you use, you will need to include these in your HTML doc, before starting the collage:
@@ -50,7 +50,7 @@ These are referred to as `loader`s in the codebase.
 Check the [loader configurations](#loaderconfig) for how to query them for content.
 
 ## API
-Collage extends [Big Surface](https://github.com/ozanturgut/big-surface), all API methods that are available for Big
+Collage extends [Big Surface](https://github.com/oztu/big-surface), all API methods that are available for Big
 Surface is also available for Collage. In the API `Collage` (capitalized) refers to the module object and `collage` (lowercase) refers to a 
 Quadtree instance which is created via `Collage.create`.
 

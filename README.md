@@ -1,4 +1,4 @@
-# <a href="http://oztu.org/collage/">Collage</a> is a Framework for Live Collages
+# <a href="http://ozan.io/collage/">Collage</a> is a Framework for Live Collages
 
 See a live example of Collage at work: [samelove.us](http://samelove.us).
 

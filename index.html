@@ -28,8 +28,8 @@
         <p>Here's a basic embedded collage, move your mouse over the collage to move. 
           <a href="sample/index.html">Click here</a> to view it full page.</p>
         <pre>
-var collage = Collage.create(document.getElementById('PopcornCollage'));
-collage.load('popcorn media', {
+var popcornCollage = collage.create(document.getElementById('PopcornCollage'));
+popcornCollage.load('popcorn media', {
   flickr: [{ tags: 'popcorn'}],
   googleNews: ['popcorn'],
   reddit: [{ query: 'popcorn' }]
@@ -154,8 +154,8 @@ collage.load('popcorn media', {
 
     // Wait for external scripts to be ready
     window.onload = function(){
-      var collage = Collage.create(document.getElementById('PopcornCollage'));
-      collage.load('popcorn media', {
+      var popcornCollage = collage.create(document.getElementById('PopcornCollage'));
+      popcornCollage.load('popcorn media', {
         flickr: [{ tags: 'popcorn'}],
         googleNews: ['popcorn'],
         reddit: [{ query: 'popcorn' }]

@@ -1,8 +1,7 @@
 'use strict';
 
-var EventEmitter = require('../../bower_components/eventEmitter/EventEmitter.js');
+var EventEmitter = require('../../bower_components/eventEmitter/EventEmitter.js').EventEmitter;
 var BaseElement = require('./Element.js');
-
 module.exports = VideoElement;
 
 // Manages global tasks, such as periodic polling of players

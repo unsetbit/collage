@@ -8,7 +8,7 @@ var Q = require('../../bower_components/q/q.js'),
 window.credits = window.credits || {};
 var credits = window.credits.flickr = {};
 
-var endpoint = 'http://api.flickr.com/services/rest/';
+var endpoint = 'https://api.flickr.com/services/rest/';
 //var endpoint = '/services/rest/';
 
 module.exports = getPhotos;
@@ -42,7 +42,8 @@ function getPhotos(collage, options){
 		'per_page=' + options.count,
 		'content_type=' + options.contentType,
 		'media=' + options.media,
-		'tags=' + options.tags
+		'tags=' + options.tags,
+		'api_key=' + '50af342c4178f4a984377a4b4b55998b'
 	];
 
 	if(options.isCommons){

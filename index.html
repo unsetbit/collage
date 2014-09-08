@@ -32,7 +32,7 @@ var collage = Collage.create(document.getElementById('PopcornCollage'));
 collage.load('popcorn media', {
   flickr: [{ tags: 'popcorn'}],
   googleNews: ['popcorn'],
-  twitter: [{ query: 'popcorn' }]
+  reddit: [{ query: 'popcorn' }]
 }).then(function(){
   collage.start('popcorn media');
   collage.speed(8);
@@ -46,12 +46,12 @@ collage.load('popcorn media', {
           <ul>
             <li>Facebook Like Boxes</li>
             <li>Images and Embeds from Reddit</li>
-            <li>Twitter Tweets</li>
             <li>Youtube Videos</li>
             <li>Flickr Images</li>
-            <li>New York Times Articles</li>
             <li>Google News Articles</li>
             <li>Google Plus Posts</li>
+            <li>New York Times Articles (requires a reverse proxy due to lack of CORS support)</li>
+            <li>Twitter Tweets (currenty broken due to auth changes to the api)</li>
           </ul>
 
           You can also easily embed any HTML element you would like, including iframes or images.
@@ -154,63 +154,49 @@ collage.load('popcorn media', {
 
     // Wait for external scripts to be ready
     window.onload = function(){
-      
-      myCollage = collage.create(document.body);
-
-      myCollage.load('my content', {
-        facebook: [
-          {    
-            minLikes: 200,
-            query: 'popcorn'
-          },
-          {
-            ids: ["110452248983275"]
-          }
-        ],
-
-
-    /*
-        youtube works but is very slow
-        youtube: [
-          { query: 'popcorn' }
-        ],
-    */
-
-        googleNews: [
-          { query: 'popcorn'}
-        ],
-
-        googlePlus: [
-          { query: 'popcorn'}
-        ],
-
-        flickr: [
-          { tags: 'popcorn'}
-        ],
-
-        reddit: [
-          { query: 'popcorn' }
-        ],
-
-    /*
-        nyTimes: [
-          { query: 'popcorn' }
-        ],
-    */
-
-    /*
-        twitter api is getting harder and harder to deal with
-        twitter: [
-          { query: 'popcorn' },
-          { query: 'caramel' }
-        ]
-    */
+      var collage = Collage.create(document.getElementById('PopcornCollage'));
+      collage.load('popcorn media', {
+        flickr: [{ tags: 'popcorn'}],
+        googleNews: ['popcorn'],
+        reddit: [{ query: 'popcorn' }]
       }).then(function(){
-        // Wait for the loading to be finished, then
-        // start the collage (filling the center) and set the active tags
-        myCollage.start('my content');
-        myCollage.speed(8);
+        collage.start('popcorn media');
+        collage.speed(8);
       });
+
+/*    facebook: [
+        {    
+          minLikes: 200,
+          query: 'popcorn'
+        },
+        {
+          ids: ["110452248983275"]
+        }
+      ],
+      googleNews: [
+        { query: 'popcorn'}
+      ],
+
+      googlePlus: [
+        { query: 'popcorn'}
+      ],
+
+      youtube works but is very slow
+      youtube: [
+        { query: 'popcorn' }
+      ],
+
+      nyTimes doesn't do CORS so they need to run through a reverse proxy
+      nyTimes: [
+        { query: 'popcorn' }
+      ],
+  
+      twitter api is getting harder and harder to deal with
+      twitter: [
+        { query: 'popcorn' },
+        { query: 'caramel' }
+      ]
+*/
     }
   </script>
 

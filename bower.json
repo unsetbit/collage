@@ -1,6 +1,6 @@
 {
   "name": "collage",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Framework for interactive collages",
   "keywords": [
     "collage",
@@ -36,7 +36,7 @@
     "type": "git",
     "url": "git@github.com:oztu/collage.git"
   },
-  "dependencies": {
+  "devDependencies": {
     "big-surface": "~0.2.0",
     "giant-quadtree": "~0.2.0",
     "mustache": "~0.7.2",

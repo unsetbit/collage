@@ -10,9 +10,7 @@ a public API library.
 
 ## Use
 For plain JavaScript applications, use the [dist/collage.js](https://raw.github.com/oztu/collage/master/dist/collage.js), 
-which will inject the Collage module object to the global scope (i.e. it creates window.Collage). 
-If you're using NodeJS (or any system that uses the export/require pattern), use [dist/collage-module.js](https://raw.github.com/oztu/collage/master/dist/collage-module.js), 
-it exports the Collage module object.
+which will inject the Collage module object to the global scope (i.e. it creates window.collage). You can also use this file as an AMD or CommonJS module. If you use bower, you can install collage with `bower install collage`.
 
 Depending on which loaders you use, you will need to include these in your HTML doc, before starting the collage:
 ```html
@@ -40,47 +38,47 @@ These are referred to as `loader`s in the codebase.
 
 * Facebook (like boxes)
 * Reddit (images and embeds)
-* Twitter
 * Youtube
 * Flickr
 * Google News
 * Google Plus
-* NY Times
+* Twitter (currently broken due to auth changes)
+* NY Times (requires a reverse-proxy due to lack of CORS headers)
 
 Check the [loader configurations](#loaderconfig) for how to query them for content.
 
 ## API
 Collage extends [Big Surface](https://github.com/oztu/big-surface), all API methods that are available for Big
-Surface is also available for Collage. In the API `Collage` (capitalized) refers to the module object and `collage` (lowercase) refers to a 
-Quadtree instance which is created via `Collage.create`.
+Surface is also available for Collage. In the API `collage`  refers to the module object and `collageInstance` refers to a 
+Collage instance which is created via `collage.create`.
 
-### `Collage.create(container)`
+### `collage.create(container)`
 Constructor function which returns a new Collage instance. The container is the element which will contain
 the collage.
 
-### `collage.load(tagName, loaderName, loaderConfig)`
+### `collageInstance.load(tagName, loaderName, loaderConfig)`
 Loads the media from the given loaderName according to the loaderConfig and assigns the loaded media to the tagName.
 
 ```javascript
-var collage = Collage.create(document.body);
-collage.load('some fb content', 'facebook', {
+var collageInstance = collage.create(document.body);
+collageInstance.load('some fb content', 'facebook', {
     minLikes: 200,
     query: 'popcorn'
 }).then(function(){
 	// Wait for the loading to be finished, then
 	// start the collage (filling the center) and set the active tags
-	collage.start('some fb content');
-	collage.speed(8);
+	collageInstance.start('some fb content');
+	collageInstance.speed(8);
 });
 ```
 
-### `collage.load(tagName, loaderMap)`
+### `collageInstance.load(tagName, loaderMap)`
 Loads the media from the given loaderName : loaderConfig mapping and assigns the loaded media to the tagName.
 
 ```javascript
-var collage = Collage.create(document.body);
+var collageInstance = collage.create(document.body);
 
-collage.load('my content', {
+collageInstance.load('my content', {
   facebook: [
     {    
       minLikes: 200,
@@ -97,42 +95,42 @@ collage.load('my content', {
 }).then(function(){
 	// Wait for the loading to be finished, then
 	// start the collage (filling the center) and set the active tags
-	collage.start('my content');
-	collage.speed(8);
+	collageInstance.start('my content');
+	collageInstance.speed(8);
 });
 ```
 
-### `collage.start(opt_var_args)`
+### `collageInstance.start(opt_var_args)`
 Starts the transform loop of the collage (allows for movement) and optionally sets the active tags to the given
 arguments.
 
-### `collage.pause(opt_duration)`
+### `collageInstance.pause(opt_duration)`
 Brings the collage movement to a halt within the given time duration (or immediately if none provided).
 
-### `collage.resume(opt_duration)`
+### `collageInstance.resume(opt_duration)`
 Resumes collage movement to the state it was in previous to a `pause` call. If a duration
 is provided, the speed will tween to the limit within the given time period.
 
-### `collage.setActiveTags(var_args)`
+### `collageInstance.setActiveTags(var_args)`
 Sets the given tags as the 'active' tags which media for the collage will be pulled from.
 
-### `collage.add(tagNames, elements)`
+### `collageInstance.add(tagNames, elements)`
 Adds the given element(s) to the given tag(s).
 
-### `collage.remove(tagNames, elements)`
+### `collageInstance.remove(tagNames, elements)`
 Removes the given element(s) from the given tag(s).
 
-### `collage.get(var_args)`
+### `collageInstance.get(var_args)`
 Gets the elements for the given tag names.
 
-### `collage.showElement(element, left, top, show)`
+### `collageInstance.showElement(element, left, top, show)`
 Inserts an element directly in the collage surface at left, top (in pixels). If show is set to true, the
 element is placed visibly, otherwise hidden.
 
-### `collage.loader`
+### `collageInstance.loader`
 A map of available loaders which you can extend during run-time.
 
-### `collage.fill()`
+### `collageInstance.fill()`
 Fills the visible center of the screen with elements.
 
 
@@ -155,12 +153,12 @@ Adds like boxes for facebook pages to the collage
 * `showHeader` (default false): whether to show a 'like our page' header in the like box
 
 ```javascript
-var collage = Collage.create(document.body);
-collage.load('some fb content', 'facebook', {
+var collageInstance = collage.create(document.body);
+collageInstance.load('some fb content', 'facebook', {
     minLikes: 200,
     query: 'one man one woman'
 }).then(function(){ // wait for the first batch to complete loading
-	collage.load('more fb content', {
+	collageInstance.load('more fb content', {
 	  facebook: [{    
 	      minLikes: 200,
 	      query: 'popcorn'
@@ -171,8 +169,8 @@ collage.load('some fb content', 'facebook', {
 	}).then(function(){
 		// Wait for the loading to be finished, then
 		// start the collage (filling the center) and set the active tags
-		collage.start('some fb content', 'more fb content');
-		collage.speed(8);
+		collageInstance.start('some fb content', 'more fb content');
+		collageInstance.speed(8);
 	});	
 });
 
@@ -193,7 +191,7 @@ Adds images or reddit embeds to the collage
 * `height` default 600, height of the embed box
 
 ```javascript
-collage.load('reddit popcorn', {
+collageInstance.load('reddit popcorn', {
 reddit: [
   {
 		query: "popcorn site:imgur.com subreddit:funny",
@@ -206,8 +204,8 @@ reddit: [
 }).then(function(){
 	// Wait for the loading to be finished, then
 	// start the collage (filling the center) and set the active tags
-	collage.start('reddit popcorn');
-	collage.speed(8);        
+	collageInstance.start('reddit popcorn');
+	collageInstance.speed(8);        
 });
 ```
 
@@ -220,15 +218,15 @@ Choose one:
  
 
 ```javascript
-collage.load('popcorn', {
+collageInstance.load('popcorn', {
  twitter: [
   	{ query: "popcorn"}
   ],
 }).then(function(){
 	// Wait for the loading to be finished, then
 	// start the collage (filling the center) and set the active tags
-	collage.start('popcorn');
-	collage.speed(8);        
+	collageInstance.start('popcorn');
+	collageInstance.speed(8);        
 });
 ```
 
@@ -253,7 +251,7 @@ Optional parameters:
 * `height` default 650
 
 ```javascript
-collage.load('popcorn', {
+collageInstance.load('popcorn', {
   youtube: [
     {
   		query: "popcorn",
@@ -271,8 +269,8 @@ collage.load('popcorn', {
 }).then(function(){
 	// Wait for the loading to be finished, then
 	// start the collage (filling the center) and set the active tags
-	collage.start('popcorn');
-	collage.speed(8);        
+	collageInstance.start('popcorn');
+	collageInstance.speed(8);        
 });
 ```
 
@@ -289,7 +287,7 @@ Adds images from Flickr to the collage
 * `contentType` default 1 (photos)
 
 ```javascript
-collage.load('popcorn', {
+collageInstance.load('popcorn', {
   flickr: [
     {  
 			tags: "popcorn",
@@ -299,8 +297,8 @@ collage.load('popcorn', {
 }).then(function(){
 	// Wait for the loading to be finished, then
 	// start the collage (filling the center) and set the active tags
-	collage.start('popcorn');
-	collage.speed(8);        
+	collageInstance.start('popcorn');
+	collageInstance.speed(8);        
 });
 ```
 ### Google News
@@ -309,13 +307,13 @@ Adds news articles from Google News to the collage.
 The loader only accepts a string query.
 
 ```javascript
-collage.load('popcorn', {
+collageInstance.load('popcorn', {
   googleNews: ["popcorn"]
 }).then(function(){
 	// Wait for the loading to be finished, then
 	// start the collage (filling the center) and set the active tags
-	collage.start('popcorn');
-	collage.speed(8);        
+	collageInstance.start('popcorn');
+	collageInstance.speed(8);        
 });
 ```
 
@@ -325,13 +323,13 @@ Adds posts from Google Plus to the collage.
 The loader only accepts a string query.
 
 ```javascript
-collage.load('popcorn', {
+collageInstance.load('popcorn', {
   googlePlus: ["popcorn"]
 }).then(function(){
 	// Wait for the loading to be finished, then
 	// start the collage (filling the center) and set the active tags
-	collage.start('popcorn');
-	collage.speed(8);        
+	collageInstance.start('popcorn');
+	collageInstance.speed(8);        
 });
 ```
 
@@ -344,15 +342,15 @@ Choose one:
 * `data` A pre-recorded JSON object to use instead of doing a query
 
 ```javascript
-collage.load('popcorn', {
+collageInstance.load('popcorn', {
 	nyTimes: [{
 		query: "popcorn+nytd_des_facet%3A%5BHate+Crimes%5D"
 	}]
 }).then(function(){
 	// Wait for the loading to be finished, then
 	// start the collage (filling the center) and set the active tags
-	collage.start('popcorn');
-	collage.speed(8);        
+	collageInstance.start('popcorn');
+	collageInstance.speed(8);        
 });
 ```
 
@@ -365,7 +363,7 @@ it embed an entire site in the collage.
 * `height`
 
 ```javascript
-collage.load('popcorn', {
+collageInstance.load('popcorn', {
   		iframe: [{
 				url: "http://en.wikipedia.org/wiki/Popcorn",
 				width: 800,
@@ -374,8 +372,8 @@ collage.load('popcorn', {
 }).then(function(){
 	// Wait for the loading to be finished, then
 	// start the collage (filling the center) and set the active tags
-	collage.start('popcorn');
-	collage.speed(8);        
+	collageInstance.start('popcorn');
+	collageInstance.speed(8);        
 });
 ```
 
@@ -385,13 +383,13 @@ Adds a single image to the collage.
 The loader only accepts a string src.
 
 ```javascript
-collage.load('popcorn', {
+collageInstance.load('popcorn', {
   image: ["http://www.popcorn.com/popcorn.jpg"]
 }).then(function(){
 	// Wait for the loading to be finished, then
 	// start the collage (filling the center) and set the active tags
-	collage.start('popcorn');
-	collage.speed(8);        
+	collageInstance.start('popcorn');
+	collageInstance.speed(8);        
 });
 ```
 

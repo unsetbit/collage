@@ -394,3 +394,6 @@ collage.load('popcorn', {
 	collage.speed(8);        
 });
 ```
+
+## Developing
+This project uses [boilerplate-gulp](https://github.com/oztu/boilerplate-gulp). Run 'gulp dev' to develop and have incremental builds, continuous testing, etc. Run 'gulp' to run regenerate the dist files. 

@@ -1,2 +1,11 @@
-node_modules
-components
+# Local-only directory
+/local/
+
+# Module manager
+/node_modules/
+/bower_components/
+
+# Generated
+/build/
+/reports/node_modules
+/reports/

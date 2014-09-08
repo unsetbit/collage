@@ -1,13 +1,11 @@
 {
   "name": "collage",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Framework for interactive collages",
-  "main": "index.js",
-  "dependencies": {},
+  "main": "src/collage.js",
   "devDependencies": {
-    "grunt": "~0.3.17",
-    "grunt-hug": "~0.4.1",
-    "grunt-contrib-copy": "~0.3.1"
+    "boilerplate-gulp": "^0.2.4",
+    "gulp": "^3.8.8"
   },
   "scripts": {
     "test": "echo 0"
@@ -23,7 +21,7 @@
   "author": {
     "name": "Ozan Turgut",
     "email": "ozanturgut@gmail.com",
-    "url": "http://oztu.org"
+    "url": "http://ozan.io"
   },
   "licenses": [
     {

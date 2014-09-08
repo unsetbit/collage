@@ -1,10 +1,10 @@
-var Q = require('q/q.js');
-var createQuadtree = require('../../giant-quadtree/dist/quadtree-module.js').create,
-	Surface = require('../../big-surface/dist/surface-module.js');
-	//Surface = require('big-surface/dist/surface-module.js');
+'use strict';
 
-var utils = require("./utils.js");
-var BoundingBox = require('./boundingBox.js'),
+var Q = require('../bower_components/q/q.js');
+var createQuadtree = require('../bower_components/giant-quadtree/dist/GiantQuadtree.js').create,
+	Surface = require('../bower_components/big-surface/dist/BigSurface.js');
+
+var BoundingBox = require('./BoundingBox.js'),
 	Tag = require('./Tag.js');
 
 var Collage = module.exports = function(container){
@@ -15,10 +15,8 @@ var Collage = module.exports = function(container){
 	this.activeTags = [];
 
 	this.updateCanvasDimensions();
+};
 
-	var self = this;
-	window.c = this;
-}
 Collage.prototype = Object.create(Surface.prototype);
 
 Collage.create = function(container){
@@ -80,7 +78,8 @@ Collage.prototype.hidingArea =  document.createDocumentFragment();
 Collage.prototype.minElementSize = 50;
 
 Collage.prototype.createTag = function(name, options){
-	return this.tags[name] = Tag.create(options);
+	this.tags[name] = Tag.create(options);
+	return this.tags[name];
 };
 
 Collage.prototype.configureTag = function(name, options){
@@ -90,8 +89,8 @@ Collage.prototype.configureTag = function(name, options){
 		return;
 	}
 
-	if("skipProbability" in options) tag.skipProbability = options.skipProbability;
-	if("tryLimit" in options) tag.tryLimit = options.tryLimit;
+	if('skipProbability' in options) tag.skipProbability = options.skipProbability;
+	if('tryLimit' in options) tag.tryLimit = options.tryLimit;
 };
 
 Collage.prototype.loadElements = function(tagNames, arg2, arg3){
@@ -105,7 +104,7 @@ Collage.prototype.loadElements = function(tagNames, arg2, arg3){
 		promise,
 		promises = [];
 
-	if(typeof arg2 === "string"){
+	if(typeof arg2 === 'string'){
 		// Handle the .load([tag name], [loader name], [loader config]) case
 		loaderMap = {};
 		loaderMap[arg2] = arg3;	
@@ -121,9 +120,11 @@ Collage.prototype.loadElements = function(tagNames, arg2, arg3){
 			if(!Array.isArray(loaderConfigs)) loaderConfigs = [loaderConfigs];		
 			loaderConfigIndex = loaderConfigs.length;
 
-			while(loaderConfig = loaderConfigs[--loaderConfigIndex]){
+			loaderConfig = loaderConfigs[--loaderConfigIndex];
+			while(loaderConfig){
 				promise = loader(this, loaderConfig).then(addElements);
 				promises.push(promise);	
+				loaderConfig = loaderConfigs[--loaderConfigIndex];
 			}
 		}
 	}
@@ -141,10 +142,12 @@ Collage.prototype.addElements = function(tagNames, elements){
 		elementIndex;
 
 	// For each tag...
-	while(tagName = tagNames[--tagNameIndex]){
+	tagName = tagNames[--tagNameIndex];
+	while(tagName){
 		tag = this.tags[tagName] || this.createTag(tagName);
 		elementIndex = elements.length;
 		while(elementIndex--) tag.add(elements[elementIndex]);
+		tagName = tagNames[--tagNameIndex];
 	}
 };
 
@@ -157,10 +160,12 @@ Collage.prototype.removeElement = function(tagNames, element){
 		tagName,
 		tag;
 
-	while(tagName = tagNames[tagNameIndex--]){
+	tagName = tagNames[tagNameIndex--];
+	while(tagName){
 		tag = this.tags[tagName];
 		if(!tag) continue;
 		tag.remove(element);
+		tagName = tagNames[tagNameIndex--];
 	}
 };
 
@@ -169,13 +174,15 @@ Collage.prototype.getElements = function(){
 		tagNameIndex = tagNames.length,
 		tagName,
 		tag,
-		chanceMultiplier,
 		elements = [];
 
-	while(tagName = tagNames[--tagNameIndex]){
-		if(tag = this.tags[tagName]){
+	tagName = tagNames[--tagNameIndex];
+	while(tagName){
+		tag = this.tags[tagName];
+		if(tag){
 			elements = elements.concat(tag.getElements());
 		}
+		tagName = tagNames[--tagNameIndex];
 	}
 
 	return elements;
@@ -188,11 +195,14 @@ Collage.prototype.setActiveTags = function(){
 		chanceMultiplier,
 		activeTags = [];
 
-	while(tagName = arguments[--index]){
-		if(tag = this.tags[tagName]){
+	tagName = arguments[--index];
+	while(tagName){
+		tag = this.tags[tagName];
+		if(tag){
 			chanceMultiplier = tag.chanceMultiplier;
 			while(chanceMultiplier--) activeTags.push(tag);
 		}
+		tagName = arguments[--index];
 	}
 
 	this.activeTags = activeTags;
@@ -203,7 +213,7 @@ Collage.prototype.getRandomActiveTag = function(){
 		failSafe = this.getRandomActiveTagFailSafe;
 
 	while(failSafe--){
-		tag = this.activeTags[(Math.random() * this.activeTags.length)|0]
+		tag = this.activeTags[(Math.random() * this.activeTags.length)|0];
 		if(tag.skipProbability < Math.random()) break;
 	}
 	
@@ -274,8 +284,8 @@ Collage.prototype.start = function(){
 	if(arguments.length > 0) this.setActiveTags.apply(this, arguments);
 	
 	if(this.activeTags.length === 0){
-		throw new Error("Unable to start without active tags");
-	};
+		throw new Error('Unable to start without active tags');
+	}
 	this.startTransformLoop();
 	this.updateCanvasDimensions();
 	this.pickNextElement();
@@ -359,9 +369,9 @@ Collage.prototype.updateElementVisibility = function(){
 };
 
 Collage.prototype.updateCanvasDimensions = function(){
-	this.viewportLeft = -1 * this.horizontalPosition - this.overScan,
-	this.viewportTop = -1 * this.verticalPosition - this.overScan,
-	this.viewportWidth = this.width + this.overScan * 2,
+	this.viewportLeft = -1 * this.horizontalPosition - this.overScan;
+	this.viewportTop = -1 * this.verticalPosition - this.overScan;
+	this.viewportWidth = this.width + this.overScan * 2;
 	this.viewportHeight = this.height + this.overScan * 2;
 	this.viewportRight = this.viewportLeft + this.viewportWidth;
 	this.viewportBottom = this.viewportTop + this.viewportHeight;
@@ -398,9 +408,11 @@ Collage.prototype.fillCenter = function(){
 			if(!this.nextElement) break;
 		}
 
-		scanCheckLeft = (this.viewportLeft - this.checkWidth) + Math.floor((this.viewportWidth + this.checkWidth) * Math.random()),
-		scanCheckTop = (this.viewportTop - this.checkHeight) + Math.floor((this.viewportHeight + this.checkHeight) * Math.random()),
-		scanCheckRight = scanCheckLeft + this.checkWidth,
+		scanCheckLeft = (this.viewportLeft - this.checkWidth) + 
+			Math.floor((this.viewportWidth + this.checkWidth) * Math.random());
+		scanCheckTop = (this.viewportTop - this.checkHeight) + 
+			Math.floor((this.viewportHeight + this.checkHeight) * Math.random());
+		scanCheckRight = scanCheckLeft + this.checkWidth;
 		scanCheckBottom = scanCheckTop + this.checkHeight;
 	
 		if(!hasCollision(boxes, scanCheckLeft, scanCheckTop, scanCheckRight, scanCheckBottom)){
@@ -422,7 +434,7 @@ Collage.prototype.fillCenter = function(){
 };
 
 Collage.prototype.updateBounds = function(){
-	this.checkHeight = this.nextElement.height + this.elementMargin * 2,
+	this.checkHeight = this.nextElement.height + this.elementMargin * 2;
 	this.checkWidth = this.nextElement.width + this.elementMargin * 2;
 
 	this.checkLeft = this.movingLeft ? (this.viewportLeft - this.checkWidth) : this.viewportRight;
@@ -470,7 +482,7 @@ function hasCollision(boxList, left, top, right, bottom){
 	}
 
 	return false;
-};
+}
 
 Collage.prototype.fill = function(){
 	var tryCount = 0,
@@ -501,7 +513,7 @@ Collage.prototype.fill = function(){
 		scanCheckBottom = scanCheckTop + this.checkHeight;
 
 		if(!hasCollision(this.horizontalBoxes, this.checkLeft, scanCheckTop, this.checkRight, scanCheckBottom)){
-			box = this.insertNextElement(this.checkLeft + this.elementMargin, scanCheckTop + this.elementMargin);
+			var box = this.insertNextElement(this.checkLeft + this.elementMargin, scanCheckTop + this.elementMargin);
 			this.horizontalBoxes.push(box);
 
 			if(!this.nextElement) break;

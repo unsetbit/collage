@@ -1,3 +1,5 @@
+'use strict';
+
 module.exports = Tag;
 
 function Tag(){
@@ -8,8 +10,8 @@ Tag.create = function(options){
 	options = options || {};
 	var tag = new Tag();
 	
-	if("skipProbability" in options) tag.skipProbability = options.skipProbability;
-	if("tryLimit" in options) tag.tryLimit = options.tryLimit;
+	if('skipProbability' in options) tag.skipProbability = options.skipProbability;
+	if('tryLimit' in options) tag.tryLimit = options.tryLimit;
 
 	return tag;
 };

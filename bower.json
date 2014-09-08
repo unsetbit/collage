@@ -1,0 +1,46 @@
+{
+  "name": "collage",
+  "version": "0.2.0",
+  "description": "Framework for interactive collages",
+  "keywords": [
+    "collage",
+    "art",
+    "gallery",
+    "display"
+  ],
+  "main": [
+    "dist/collage.js"
+  ],
+  "authors": [
+    "Ozan Turgut <ozanturgut@gmail.com>"
+  ],
+  "moduleType": [
+    "amd",
+    "node",
+    "globals"
+  ],
+  "license": "APACHE 2",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "example",
+    "src",
+    "dev",
+    "build",
+    "package.json",
+    "gulpfile.js",
+    "package.json"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:oztu/collage.git"
+  },
+  "dependencies": {
+    "big-surface": "~0.2.0",
+    "giant-quadtree": "~0.2.0",
+    "mustache": "~0.7.2",
+    "eventEmitter": "~4.0.5",
+    "q": "0.8.12"
+  }
+}

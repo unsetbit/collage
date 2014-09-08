@@ -1,5 +1,7 @@
-var Q = require('q/q.js');
-var SimpleElement = require("../element/Simple.js");
+'use strict';
+
+var Q = require('../../bower_components/q/q.js');
+var SimpleElement = require('../element/Simple.js');
 
 var documentFragment = document.createDocumentFragment();
 

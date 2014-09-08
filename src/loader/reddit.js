@@ -1,17 +1,21 @@
-var Q = require('q/q.js'),
-	SimpleElement = require("../element/Simple.js"),
-	IframeElement = require("../element/Iframe.js"),
-	utils = require("../utils.js"),
+'use strict';
+
+/* jshint camelcase:false */
+
+var Q = require('../../bower_components/q/q.js'),
+	SimpleElement = require('../element/Simple.js'),
+	IframeElement = require('../element/Iframe.js'),
+	utils = require('../utils.js'),
 	getFromApi = require('./getFromCommonApi.js');
 
 window.credits = window.credits || {};
 var credits = window.credits.reddit = {};
 
-var endpoint = "http://www.reddit.com/r/all/search.json";
-//var endpoint = "/r/all/search.json";
+var endpoint = 'http://www.reddit.com/r/all/search.json';
+//var endpoint = '/r/all/search.json';
 
 module.exports = function(collage, options){
-	if(options.type === "embed"){
+	if(options.type === 'embed'){
 		return getEmbed(collage, options);
 	} else {
 		return getPhotos(collage, options);
@@ -20,26 +24,25 @@ module.exports = function(collage, options){
 
 function getEmbed(collage, options){
 	utils.extend(options, defaults);
-	params = [
-		"limit=" + options.limit,
-		"restrict_sr=" + options.restrict_sr, 
-		"sort=" + options.sort,
-		"t=" + options.time,
-		"q=" + options.query
+	var params = [
+		'limit=' + options.limit,
+		'restrict_sr=' + options.restrict_sr, 
+		'sort=' + options.sort,
+		't=' + options.time,
+		'q=' + options.query
 	];
 
-	var iframe;
-	var self = this,
-		iframe = document.createElement("IFRAME"),
+	var iframe = document.createElement('IFRAME'),
 		iframeDoc,
 		iframeContent;
 
 	var element = utils.attachIframeToCollage(collage, iframe, options.width, options.height);
 
 	iframeDoc = (iframe.contentDocument) ? iframe.contentDocument : iframe.contentWindow.document;
-	iframeContent = "<html><head><title></title></head><body>";
-	iframeContent += '<script type="text/javascript" src="http://www.reddit.com/r/' + options.subreddit + '/search.embed?' + params.join("&").replace(' ', '%20') + '"></script>';
-	iframeContent += "</body></html>";
+	iframeContent = '<html><head><title></title></head><body>';
+	iframeContent += '<script type="text/javascript" src="http://www.reddit.com/r/' + 
+		options.subreddit + '/search.embed?' + params.join('&').replace(' ', '%20') + '"></script>';
+	iframeContent += '</body></html>';
 	
 	iframeDoc.open();
 	iframeDoc.write(iframeContent);
@@ -49,12 +52,12 @@ function getEmbed(collage, options){
 }
 
 var defaults = {
-	limit: "20",
-	subreddit: "all",
-	restrict_sr: "false",
-	sort: "top",
-	time: "all",
-	nsfw: "false",
+	limit: '20',
+	subreddit: 'all',
+	restrict_sr: 'false',
+	sort: 'top',
+	time: 'all',
+	nsfw: 'false',
 	minComments: 0,
 	width: 500,
 	height:600,
@@ -65,18 +68,18 @@ function getPhotos(collage, options){
 	var deferred = Q.defer(),
 		params;
 	
-	if(typeof options === "string") options = {tags: options};
+	if(typeof options === 'string') options = {tags: options};
 	utils.extend(options, defaults);
 
 	params = [
-		"limit=" + options.limit,
-		"restrict_sr=" + options.restrict_sr, 
-		"sort=" + options.sort,
-		"t=" + options.time,
-		"q=" + options.query
+		'limit=' + options.limit,
+		'restrict_sr=' + options.restrict_sr, 
+		'sort=' + options.sort,
+		't=' + options.time,
+		'q=' + options.query
 	];
 	
-	getFromApi(endpoint, "jsonp", params).then(function(response){
+	getFromApi(endpoint, 'jsonp', params).then(function(response){
 		var elements = [],
 			photos = response.data && response.data.children || [],
 			waiting;
@@ -86,7 +89,7 @@ function getPhotos(collage, options){
 
 			if(	item.score < options.minScore || 
 				item.num_comments < options.minComments ||
-				(!~item.url.indexOf(".jpg"))){
+				(!~item.url.indexOf('.jpg'))){
 				return false;	
 			}
 
@@ -97,15 +100,15 @@ function getPhotos(collage, options){
 		photos.forEach(function(item){
 			item = item.data;
 			
-			credits[item.author] = "http://www.reddit.com" + item.permalink;
+			credits[item.author] = 'http://www.reddit.com' + item.permalink;
 			
 			loadImage(item.url).then(function(element){
-				var anchor = document.createElement("a");
-				anchor.href = "http://www.reddit.com" + item.permalink;
+				var anchor = document.createElement('a');
+				anchor.href = 'http://www.reddit.com' + item.permalink;
 				anchor.width = element.width;
 				anchor.height = element.height;
-				anchor.target = "_blank";
-				anchor.style.display = "block";
+				anchor.target = '_blank';
+				anchor.style.display = 'block';
 				anchor.appendChild(element);
 				
 				elements.push(SimpleElement.create(anchor));
@@ -118,7 +121,7 @@ function getPhotos(collage, options){
 	});
 
 	return deferred.promise;
-};
+}
 
 var documentFragment = document.createDocumentFragment();
 function loadImage(src){
@@ -136,4 +139,4 @@ function loadImage(src){
 	img.onerror = deferred.reject.bind(deferred);
 
 	return deferred.promise;
-};
+}

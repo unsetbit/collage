@@ -1,8 +1,11 @@
+'use strict';
+/* globals twttr */
+/* jshint camelcase:false */
+
 // This uses an undocumented twitter api (twttr.widget.createTweet) so it might break
 
-var Q = require('q/q.js'),
+var Q = require('../../bower_components/q/q.js'),
 	getFromApi = require('./getFromCommonApi.js'),	
-	utils = require("../utils.js"),
 	IframeElement = require('../element/Iframe.js');
 
 var TIMEOUT = 1000 * 10;
@@ -28,14 +31,14 @@ module.exports = function(collage, options){
 };
 
 var loadTweets = (function(){
-	return function(ids, container, collage){
+	return function(ids, container){
 		if(!Array.isArray(ids) || !container) return;
 
 		var index = ids.length,
 			deferred = Q.defer(),
 			elements = [],
 			timedOut = false,
-			waitingForResize = [];
+			waitingForResize = [],
 			timeout = setTimeout(function(){
 				timedOut = true;
 				clearInterval(heightChecker);
@@ -48,7 +51,7 @@ var loadTweets = (function(){
 
 			while(index--){
 				element = waitingForResize[index];
-				if(element.height !== "0"  && element.width !== "0"){
+				if(element.height !== '0'  && element.width !== '0'){
 					elements.push(IframeElement.create(element));
 
 					if(elements.length === ids.length){
@@ -64,44 +67,45 @@ var loadTweets = (function(){
 
 		var heightChecker = setInterval(heightCheck, 250);
 
+		function handleElement(element){
+			if(timedOut) return;
+
+			var iframeWindow =  'contentWindow' in element? element.contentWindow : element.contentDocument.defaultView;
+			
+			var onMouseMoveCallback = iframeWindow.onmousemove;
+			
+			// Iframes capture all events, this allows us to bubble the event
+			// up to this window's scope
+			iframeWindow.onmousemove = function(e){
+				if(onMouseMoveCallback) onMouseMoveCallback(e);
+				var evt = document.createEvent('MouseEvents'),
+					boundingClientRect = element.getBoundingClientRect();
+
+				evt.initMouseEvent(	'mousemove', 
+									true, 
+									false, 
+									window,
+									e.detail,
+									e.screenX,
+									e.screenY, 
+									e.clientX + boundingClientRect.left, 
+									e.clientY + boundingClientRect.top, 
+									e.ctrlKey, 
+									e.altKey,
+									e.shiftKey, 
+									e.metaKey,
+									e.button, 
+									null);
+				
+				element.dispatchEvent(evt);
+			};
+
+			waitingForResize.push(element);
+			element.style.opacity = 0;
+		}
+
 		while(index--){
-			twttr.widgets.createTweet(ids[index], container, function(element){
-				if(timedOut) return;
-
-				var iframeWindow =  'contentWindow' in element? element.contentWindow : element.contentDocument.defaultView;
-				
-				var onResizeCallback = iframeWindow.onresize,
-					onMouseMoveCallback = iframeWindow.onmousemove;
-				
-				// Iframes capture all events, this allows us to bubble the event
-				// up to this window's scope
-				iframeWindow.onmousemove = function(e){
-					onMouseMoveCallback && onMouseMoveCallback(e);
-					var evt = document.createEvent("MouseEvents"),
-						boundingClientRect = element.getBoundingClientRect();
-
-					evt.initMouseEvent(	"mousemove", 
-										true, 
-										false, 
-										window,
-										e.detail,
-										e.screenX,
-										e.screenY, 
-										e.clientX + boundingClientRect.left, 
-										e.clientY + boundingClientRect.top, 
-										e.ctrlKey, 
-										e.altKey,
-										e.shiftKey, 
-										e.metaKey,
-										e.button, 
-										null);
-					
-					element.dispatchEvent(evt);
-				};
-
-				waitingForResize.push(element);
-				element.style.opacity = 0;
-			});
+			twttr.widgets.createTweet(ids[index], container, handleElement);
 		}
 
 		return deferred.promise;
@@ -109,8 +113,8 @@ var loadTweets = (function(){
 }());
 
 var queryTweets = (function(){
-	var endpoint = "http://search.twitter.com/search.json";
-	//var endpoint = "/search.json";
+	var endpoint = 'http://search.twitter.com/search.json';
+	//var endpoint = '/search.json';
 
 	return function(query){
 		return getFromApi(endpoint, [
@@ -133,7 +137,7 @@ var queryTweets = (function(){
 					return;	
 				}
 
-				credits[item.from_user] = "http://twitter.com/" + item.from_user;
+				credits[item.from_user] = 'http://twitter.com/' + item.from_user;
 
 				tweetIds.push(item.id_str);
 			});

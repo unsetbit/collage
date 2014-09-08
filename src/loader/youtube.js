@@ -1,8 +1,10 @@
-require('eventEmitter/EventEmitter.js');
+'use strict';
+/* globals YT */
 
-var Q = require('q/q.js');
+var Q = require('../../bower_components/q/q.js');
 var VideoElement = require('../element/Video.js');
 var getFromApi = require('./getFromCommonApi.js');
+var utils = require('../utils.js');
 var TIMEOUT = 10 * 1000;
 
 window.credits = window.credits || {};
@@ -13,7 +15,7 @@ module.exports = function(collage, options){
 		return queryVideos(options).then(function(videoIds){
 			options.videoIds = videoIds;
 			return loadVideos(collage, options);
-		})
+		});
 	}
 
 	if(options.videoId){
@@ -28,32 +30,32 @@ module.exports = function(collage, options){
 };
 
 var defaults = {
-	duration: "short",
+	duration: 'short',
 	key: 'AIzaSyAZw0kviWeCOidthcZAYs5oCZ0k8DsOuUk'
 };
 
 var queryVideos = (function(){
-	var endpoint = "https://www.googleapis.com/youtube/v3/search";
-	//var endpoint = "https://d3ggoqbhpexke2.cloudfront.net/youtube/v3/search";
+	var endpoint = 'https://www.googleapis.com/youtube/v3/search';
+	//var endpoint = 'https://d3ggoqbhpexke2.cloudfront.net/youtube/v3/search';
 
 	return function(options){
 		utils.extend(options, defaults);
 
 		var params = [
-				"part=id,snippet",
-				"videoDuration=" + options.duration,
-				"type=video",
-				"videoEmbeddable=true",
-				"videoSyndicated=true",
-				"key=" + options.key,
-				"q=" + encodeURIComponent(options.query)
+				'part=id,snippet',
+				'videoDuration=' + options.duration,
+				'type=video',
+				'videoEmbeddable=true',
+				'videoSyndicated=true',
+				'key=' + options.key,
+				'q=' + encodeURIComponent(options.query)
 			];
 		
 		return getFromApi(endpoint, params).then(function(response){
 			var videoIds = [];
 
 			response.items.forEach(function(item){
-				credits[item.snippet.channelTitle] = "http://youtube.com/" + item.snippet.channelTitle;
+				credits[item.snippet.channelTitle] = 'http://youtube.com/' + item.snippet.channelTitle;
 				videoIds.push(item.id.videoId);
 			});
 
@@ -84,7 +86,7 @@ var loadVideos = (function(){
 				clearTimeout(timeout);
 				deferred.resolve(elements);
 			}
-		}
+		};
 
 		while(index--){
 			videoOptions = Object.create(options);
@@ -105,14 +107,14 @@ var loadVideo = (function(){
 			width = options.width || 1060,
 			height = options.height || 650;
 
-		var playerId = "player" + (playerIdCounter++);
+		var playerId = 'player' + (playerIdCounter++);
 
-		var element = document.createElement("div");
+		var element = document.createElement('div');
 		element.width = width;
 		element.height = height;
-		element.className = "youtube-video";
+		element.className = 'youtube-video';
 		
-		if(isiOS) element.className += " hide-video-mask";
+		if(isiOS) element.className += ' hide-video-mask';
 
 		element.innerHTML = '<div id="' + playerId + '"></div><div class="video-mask"></div>';
 		collage.element.appendChild(element);
@@ -138,11 +140,11 @@ var loadVideo = (function(){
 					});
 					
 					if(isiOS){
-						videoElement.on("playing", function(){
+						videoElement.on('playing', function(){
 							element.className = element.className.replace(' hide-video-mask', '');
 						});
 
-						videoElement.on("paused", function(){
+						videoElement.on('paused', function(){
 							element.className += ' hide-video-mask';
 						});
 					}
@@ -160,7 +162,7 @@ var loadVideo = (function(){
 					
 					if(options.callback) options.callback(videoElement);
 				},
-				onError: function(e){
+				onError: function(){
 				}
 			}
 		});

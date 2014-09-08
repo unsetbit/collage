@@ -1,5 +1,7 @@
-require('eventEmitter/EventEmitter.js');
-var Element = require("./Element.js");
+'use strict';
+
+var EventEmitter = require('../../bower_components/eventEmitter/EventEmitter.js');
+var BaseElement = require('./Element.js');
 
 module.exports = VideoElement;
 
@@ -35,7 +37,7 @@ var timeManager = (function(){
 			}, 500); 	// 500 ms ensures that we account for fluctuations in 
 					// timing so we report the time accurate to the second
 		}
-	}
+	};
 
 	api.remove = function(element){
 		var index = ACTIVE_ELEMENTS.indexOf(element);
@@ -45,21 +47,21 @@ var timeManager = (function(){
 				clearInterval(PERIODIC_LISTENER);  
 			}	
 		}
-	}
+	};
 
 	return api;
 }());
 
 function VideoElement (element, player){
-	Element.call(this, element);
+	BaseElement.call(this, element);
 	this.player = player;
 	this.emitter = new EventEmitter();
 	this.lastReportedTime = 0;
-	player.addEventListener("onStateChange", this.statusChangeHandler.bind(this));
-	player.addEventListener("onError", this.errorHandler.bind(this));
+	player.addEventListener('onStateChange', this.statusChangeHandler.bind(this));
+	player.addEventListener('onError', this.errorHandler.bind(this));
 	this.hide();
-};
-VideoElement.prototype = Object.create(Element.prototype);
+}
+VideoElement.prototype = Object.create(BaseElement.prototype);
 
 VideoElement.create = function(element, player, options){
 	var videoElement = new VideoElement(element, player);
@@ -72,7 +74,7 @@ VideoElement.create = function(element, player, options){
 };
 
 VideoElement.getApi = function(element){
-	var api = Element.getApi(element);
+	var api = BaseElement.getApi(element);
 	api.player = element.player;
 	api.element = element.element;
 	api.on = element.emitter.on.bind(element.emitter);
@@ -102,7 +104,7 @@ VideoElement.prototype.destroy = function(){
 };
 
 VideoElement.prototype.hide = function(){
-	Element.prototype.hide.call(this);
+	BaseElement.prototype.hide.call(this);
 	this.element.style.opacity = 0;
 	
 	if(!this.continuousPlay){
@@ -112,7 +114,7 @@ VideoElement.prototype.hide = function(){
 
 VideoElement.prototype.show = function(left, top){
 	this.element.style.opacity = 1;
-	Element.prototype.show.call(this, left, top);
+	BaseElement.prototype.show.call(this, left, top);
 	
 	if(this.playing && !this.continuousPlay){
 		this.player.playVideo();
@@ -150,4 +152,4 @@ VideoElement.prototype.statusChangeHandler = function(status){
 			this.emitter.emit('video cued');
 		break;
 	}
-}
+};

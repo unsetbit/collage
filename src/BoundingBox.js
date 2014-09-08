@@ -1,3 +1,5 @@
+'use strict';
+
 var BoundingBox = module.exports = function(element, left, top){
 	this.element = element;
 	this.top = top || 0;
@@ -8,7 +10,7 @@ var BoundingBox = module.exports = function(element, left, top){
 	this.right = this.left + this.width;
 
 	element.locations.push(this);
-}
+};
 
 BoundingBox.prototype.show = function(container){
 	if(this.visible) return;
